@@ -1,0 +1,34 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body>
+<script src="s-web.js"></script>
+<script>
+// The preview: each message holds a program; the page is cleared and built from it again.
+let cur = null
+addEventListener('message', (e) => {
+  const d = e.data || {}
+  if (d.ping) { parent.postMessage({ ready: true }, '*'); return }
+  if (d.forget) { for (const k of Object.keys(localStorage)) if (k.startsWith('s:')) localStorage.removeItem(k); return }
+  if (typeof d.src !== 'string') return
+  if (cur) cur.dom.stop()
+  document.body.replaceChildren()
+  const sheet = document.getElementById('s-sheet')
+  if (sheet) sheet.remove()
+  document.title = ''
+  const src = d.src
+  const t = performance.now()
+  const joins = new Map()
+  const show = (v) => (typeof v === 'object' ? v.w : String(v))
+  cur = S.runS(src, {
+    onJoin: (rec) => {
+      const at = S.errorAt(src, { code: { src: rec.L.lanes[0].src, spans: [rec.L.at] }, pc: 0 })
+      if (at !== null) joins.set(at, rec.lanes.map((l) => l.args.map(show)))
+    },
+    write: (s) => parent.postMessage({ out: s }, '*'),
+    onError: (er) => parent.postMessage({ err: er.msg, at: S.errorAt(src, er) }, '*'),
+  })
+  parent.postMessage({ done: true, ops: cur.rt.ops, ms: performance.now() - t, title: document.title, joins: [...joins] }, '*')
+})
+parent.postMessage({ ready: true }, '*')
+</script>
+</body></html>

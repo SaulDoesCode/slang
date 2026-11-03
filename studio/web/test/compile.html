@@ -1,0 +1,16 @@
+<!doctype html><html><head><meta charset="utf-8"></head><body>
+<script type="module">
+import { compilePage } from '../compile.js'
+import { LIB } from '../std.js'
+window.compile = async (src) => {
+  const f = document.createElement('iframe')
+  f.srcdoc = '<!doctype html><html><head></head><body></body></html>'
+  document.body.append(f)
+  await new Promise((r) => (f.onload = r))
+  const parts = await (await fetch('../s-core.parts.json')).json()
+  const r = await compilePage(src, { doc: f.contentDocument, lib: LIB, core: '', parts })
+  f.remove()
+  return r
+}
+window.ready = true
+</script></body></html>

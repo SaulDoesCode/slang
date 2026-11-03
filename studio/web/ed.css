@@ -1,0 +1,107 @@
+/* the editor: zones, lanes, caret, selection; used by the page playground and the native editor */
+/* the editor */
+.ed { --lh: 22px; }
+.ed-scroll { position: absolute; inset: 0; overflow: auto; scrollbar-gutter: stable; cursor: text; }
+.ed-inner { position: relative; min-height: 100%; }
+.ed-doc { margin: 0; padding: 12px 16px 40vh; font: var(--fs, 14px)/var(--lh) var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; text-align: right; tab-size: 2; color: var(--ink); }
+.ed-over { position: absolute; inset: 0; pointer-events: none; }
+.ed-over > div { position: absolute; }
+.ed-input { position: absolute; width: 2px; height: 1.2em; opacity: 0; padding: 0; border: 0; resize: none; overflow: hidden; white-space: pre; font: 14px var(--mono); }
+.ed .caret { background: var(--roast); visibility: hidden; }
+.ed.focused .caret { visibility: visible; animation: blink 1.1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.ed .sel { background: rgba(122,85,50,.22); }
+.ed .errbox { border-bottom: 2px solid var(--err); background: rgba(176,65,62,.12); }
+.ed .pre { outline: 1px dashed currentColor; }
+.ed .ptr.line { background: currentColor; opacity: .8; }
+.ed .ptr.tag { padding: 2px 7px; font-size: 12px; white-space: nowrap; color: var(--ink); border: 1px solid var(--crema); box-shadow: var(--shadow); }
+.ed-end { display: inline; }
+
+/* zones: a brace is its background; its edges are where the caret goes in and out */
+.zone { border-radius: 3px; padding: 2px 0; -webkit-box-decoration-break: clone; box-decoration-break: clone; background: var(--zb); }
+.edge { display: inline-block; vertical-align: -0.28em; height: 1.3em; line-height: 1.3em; overflow: hidden; }
+.edge.brace { width: 4px; color: transparent; background: var(--ze); border-radius: 2px; }
+.zone > .edge.brace:first-child { margin-right: 1px; }
+.zone > .edge.brace:last-child { margin-left: 1px; }
+.show-braces .edge.brace { width: auto; color: var(--ze-ink, var(--roast)); background: none; }
+.edge.brace.bad, .zone.open > .edge.brace:first-child { width: auto; color: var(--err); background: rgba(176,65,62,.15); }
+.zone.prose { font-style: italic; }
+.z-plain { --zb: rgba(122,85,50,.09); --ze: rgba(122,85,50,.35); }
+.z-el { --zb: rgba(207,150,90,.16); --ze: rgba(176,110,50,.55); }
+.z-comp { --zb: rgba(110,150,60,.15); --ze: rgba(90,130,40,.55); }
+.z-attr { --zb: rgba(214,170,40,.18); --ze: rgba(180,140,20,.6); }
+.z-ev { --zb: rgba(235,140,40,.2); --ze: rgba(215,110,20,.7); }
+.z-try { --zb: rgba(205,55,45,.17); --ze: rgba(190,40,35,.85); }
+.z-catch { --zb: rgba(205,55,45,.3); --ze: rgba(150,30,25,.9); }
+.z-loop { --zb: rgba(50,150,100,.15); --ze: rgba(40,130,85,.6); }
+.z-page { --zb: rgba(60,110,190,.13); --ze: rgba(50,90,170,.6); }
+.z-style { --zb: rgba(140,80,170,.13); --ze: rgba(120,60,150,.55); }
+.z-def { --zb: rgba(40,140,140,.13); --ze: rgba(30,120,120,.6); }
+.z-branch { --zb: rgba(170,120,60,.16); --ze: rgba(150,100,40,.6); }
+.z-note { --zb: transparent; --ze: rgba(154,138,116,.5); color: #9a8a74; font-style: italic; }
+.z-lanes { --zb: rgba(45,92,138,.14); --ze: rgba(45,92,138,.7); }
+/* each kind of zone has its own edge shape, so zones read without colour:
+   element square, event round, try double, loop dashed, page tall, word notched, style dotted */
+.z-el, .z-el > .edge.brace { border-radius: 0; }
+.z-ev { border-radius: 1em; }
+.z-ev > .edge.brace { width: 7px; height: 7px; border-radius: 50%; vertical-align: 0.1em; }
+.z-try > .edge.brace, .z-catch > .edge.brace { width: 6px; background: none; border-left: 6px double var(--ze); box-sizing: border-box; border-radius: 0; }
+.z-catch > .edge.brace { border-left-style: solid; border-left-width: 2px; width: 2px; }
+.z-loop > .edge.brace { background: repeating-linear-gradient(to bottom, var(--ze) 0 3px, transparent 3px 6px); border-radius: 0; }
+.z-page > .edge.brace { height: 2.1em; vertical-align: -0.65em; border-radius: 0; }
+.z-def > .edge.brace { width: 6px; clip-path: polygon(0 0, 100% 0, 100% 35%, 40% 50%, 100% 65%, 100% 100%, 0 100%); border-radius: 0; }
+.z-style > .edge.brace { background: radial-gradient(circle, var(--ze) 1.5px, transparent 2px) 0 0 / 4px 5px; }
+.show-braces .zone > .edge.brace { width: auto; height: 1.3em; vertical-align: -0.28em; border: 0; clip-path: none; background: none; border-radius: 0; }
+.ed .pre.z-try, .ed .ptr.z-try { color: rgb(190,40,35); background: var(--zb); }
+.ed .pre { background: var(--zb); color: var(--ze); }
+.ed .ptr.line { color: var(--ze); }
+.ed .ptr.tag { background: var(--foam); border-left: 4px solid var(--ze); }
+
+/* lanes: a fork is a box of rows; the beads after the merge are shown faintly on the other rows */
+.fork { display: inline-flex; flex-direction: column; align-items: flex-end; vertical-align: baseline; position: relative;
+  border-left: 3px solid rgba(45,92,138,.6); border-radius: 4px 0 0 4px; background: rgba(45,92,138,.06); margin: 2px 0; white-space: pre; }
+.fork[data-label], .fork[data-how] { padding-top: 9px; }
+.fork.open { border-left-style: dashed; }
+.fork[data-label]::before, .fork[data-how]::before { position: absolute; left: 4px; top: -1px; font-size: 9px; line-height: 10px; color: rgba(45,92,138,.8); letter-spacing: .04em; white-space: nowrap; }
+.fork[data-label]::before { content: attr(data-label); }
+.fork[data-how]::before { content: attr(data-how); }
+.fork[data-label][data-how]::before { content: attr(data-label) ' · ' attr(data-how); }
+.lane { display: block; line-height: var(--lh); padding: 0 2px 0 6px; }
+.lane + .lane { border-top: 1px dashed rgba(45,92,138,.35); }
+.edge.mark { width: 3px; color: transparent; background: rgba(45,92,138,.45); border-radius: 2px; }
+.edge.mark.m-fork { background: none; width: 2px; }
+.edge.mark.m-merge { background: rgba(45,92,138,.7); }
+.edge.mark.m-join { width: auto; color: #2d5c8a; background: rgba(45,92,138,.12); padding: 0 2px; }
+.edge.mark.stray { width: auto; color: var(--err); background: rgba(176,65,62,.15); }
+.show-braces .edge.mark { width: auto; color: #2d5c8a; background: none; }
+.clone { opacity: .35; }
+.k-label { font-size: 11px; color: #2d5c8a; }
+.joinres { display: inline-block; margin-left: 6px; padding: 0 6px; font-size: 11px; line-height: 18px; color: #2d5c8a; background: rgba(45,92,138,.1); border-radius: 9px; user-select: none; vertical-align: middle; }
+
+.ed-mint { position: absolute; left: 10px; right: 10px; bottom: 10px; max-height: 45%; overflow: auto; background: var(--milk); border: 1px solid var(--line); box-shadow: var(--shadow); padding: 6px 12px; text-align: right; white-space: pre-wrap; font: 13px/1.6 var(--mono); }
+.ed-mint .head { color: var(--ink2); text-align: left; font-size: 12px; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
+.ed-menu { position: absolute; z-index: 4; display: flex; flex-direction: column; min-width: 170px; background: var(--foam); border: 1px solid var(--line); box-shadow: var(--shadow); padding: 4px; gap: 2px; }
+.ed-menu button { text-align: left; box-shadow: none; border: 0; border-left: 4px solid var(--ze, var(--crema)); background: var(--zb, var(--milk)); }
+.ed-menu button:hover { filter: brightness(.95); }
+
+/* the colors of the words */
+.k-el { color: #7a3e20; font-weight: 600; } .k-attr { color: #8a5a00; } .k-ev { color: #b0413e; } .k-comp { color: #4b6a2a; font-weight: 600; }
+.k-num { color: #2f6f62; } .k-sig { color: #2d5c8a; } .k-quote { color: #8a6a10; } .k-cmd { color: #7a3e20; } .k-try { color: #b0413e; font-weight: 600; }
+.k-note { color: #9a8a74; font-style: italic; }
+.ed-mint .row { display: block; width: 100%; box-sizing: border-box; border: 0; border-bottom: 1px dotted var(--line); background: transparent; color: var(--ink); text-align: right; font: inherit; padding: 1px 0; outline: none; }
+.ed-mint .row:focus { background: rgba(45,92,138,.07); }
+.ed-mint .head label { margin-left: 4px; cursor: pointer; }
+.ed-mint .head .note { color: var(--err); }
+.k-clash { text-decoration: underline wavy var(--err); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+
+/* line numbers at the right edge, notes at the left of their lines, marks under ranges */
+.ed.numbered .ed-doc { padding-right: 58px; }
+.ed-lines { position: absolute; inset: 0; pointer-events: none; }
+.ed-lines .ln { position: absolute; right: 6px; width: 40px; text-align: right; font: 11px/var(--lh) var(--mono); color: #b5a088; }
+.ed-lines .note { position: absolute; left: 10px; font: 12px/var(--lh) var(--mono); color: #2f6f62; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; }
+.ed-lines .note.fail, .ed-lines .note.err { color: var(--err); }
+.ed .mark { background: rgba(214,170,40,.28); }
+.ed .mark.cur { background: rgba(214,140,20,.5); }
+.ed .mark.use { background: rgba(45,92,138,.16); border-bottom: 1px solid rgba(45,92,138,.5); }
+.ed.readonly .ed-doc { background: repeating-linear-gradient(135deg, transparent 0 14px, rgba(122,85,50,.035) 14px 15px); }
+.ed .ed-input { font-size: var(--fs, 14px); }

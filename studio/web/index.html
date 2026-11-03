@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>s for the page</title>
+<link rel="stylesheet" href="play.css">
+<link rel="stylesheet" href="ed.css">
+<link rel="icon" href="data:,">
+</head>
+<body>
+<header id="bar">
+  <b>s</b><span class="dim">for the page</span>
+  <button id="run" title="Run (Ctrl+Enter)">Run</button>
+  <label title="Run again a moment after each edit"><input type="checkbox" id="live" checked> live</label>
+  <span class="sep"></span>
+  <button id="new" title="A new, empty program">new</button>
+  <button id="open" title="Open an .s file (Ctrl+O)">open</button>
+  <span id="name"></span>
+  <button id="save" title="Save to the file it came from (Ctrl+S)">save</button>
+  <button id="s5" title="Download the program in s5, five bits a character">.s5</button>
+  <button id="export" title="Compile: the page as HTML and CSS, with a script only for what changes">.html</button>
+  <button id="exportReader" title="The program and the whole machine with its reader, in one .html">.html + reader</button>
+  <button id="forget" title="Forget what keep stored for the preview">forget kept</button>
+  <span class="sep"></span>
+  <label title="Show the braces the zones stand for"><input type="checkbox" id="braces"> braces</label>
+  <button id="mint" title="The lines the caret's line mints (F6)">minted</button>
+  <button id="ref" title="The words and the keys (F1)">words</button>
+  <span id="status"></span>
+  <input type="file" id="file" accept=".s,text/plain" hidden>
+</header>
+<main id="panes">
+  <section id="left">
+    <div id="ed"></div>
+    <div id="console"><div class="head">output <span id="ops"></span><span id="where"></span></div><pre id="out"></pre></div>
+  </section>
+  <div id="split" title="Drag to resize"></div>
+  <section id="right">
+    <iframe id="view" src="frame.html" title="the page"></iframe>
+  </section>
+</main>
+
+<aside id="words" hidden>
+  <div class="head"><b>the words</b><span>F1 closes</span></div>
+  <div class="cols">
+  <div>
+    <h4>elements</h4>
+    <p><code>{children} div.card#main</code> an element: its tag, then classes (camelCase becomes kebab-case) and an id. <code>&lt;div</code> is the same word</p>
+    <p>the brace before it is its children. It runs as s when it holds a brace, a quote, a lane mark, an element word with a class or an id, a <code>$selector</code>, an attribute, an event or a component, or when its last word is an element word; otherwise it is text, punctuation and all</p>
+    <p>a name spelled like an element is written <code>\p</code>; std's <code>div sub map</code> stay maths inside the library and are elements in the page</p>
+    <p><code>input img br hr</code> and the other void tags take no brace</p>
+    <h4>modifiers, before the element they shape</h4>
+    <p><code>{/about} href=</code> any attribute; <code>class=</code> adds classes, <code>style=</code> adds inline style</p>
+    <p><code>{n;} onclick</code> an event: the brace runs as s. While it runs, <code>e.value~ e.checked~ e.key~ e.id~ e.text~</code> hold what happened</p>
+    <p><code>#side at</code> the element goes into another element · <code>routes</code> the element shows the page the address names</p>
+    <h4>names the page follows</h4>
+    <p>an element whose brace reads a name runs its brace again when an event or a timer writes that name; only that element</p>
+    <p><code>{~n~} p</code> a text with names: the element follows them</p>
+    <p><code>{~draft~} value= input</code> an input whose value is one name holds that name, both ways (also <code>checked=</code>)</p>
+    <h4>lanes</h4>
+    <p><code>⟪1¦2¦3⟫ 10 \+ =~ ⨝</code> the line splits into lanes, each runs the rest, the lanes join; writes stay filed by lane</p>
+    <p><code>lanes</code> how many · <code>i lane</code> lane i's line, its names read first · <code>endlane</code> · <code>collect</code> every lane's line · <code>{q} reduce</code> · <code>{q} lanewise</code></p>
+    <p><code>⟪xs…⟫ 2 \* =~ ⨝ ys into</code> one lane per item of list xs; <code>ys into</code> puts every lane's line into list ys</p>
+    <p><code>{body} {handler} try</code> on an error in body, handler runs with <code>err~</code></p>
+    <p>in the page, lanes run one after another; the native machine (s3-studio, <code>/s/</code>) runs them as SIMD or on threads</p>
+  </div>
+  <div>
+    <h4>words</h4>
+    <p><code>{code} name page</code> a page, shown by <code>#/name</code>; the first is the default</p>
+    <p><code>{code} $#app</code> runs code into an element already on the page</p>
+    <p><code>{body} .sel css</code> a style rule, once per selector · <code>{css text} sheet</code> raw CSS</p>
+    <p><code>{&lt;b&gt;html&lt;/b&gt;} html</code> raw HTML here</p>
+    <p><code>list {code} each</code> the code once per item, with <code>it</code> and <code>i</code></p>
+    <p><code>name keep</code> the name, number or list is kept in the browser between visits</p>
+    <p><code>{code} 1000 every</code> · <code>{code} 500 after</code> timers · <code>refresh</code> runs every brace that reads names</p>
+    <p><code>{text} title</code> the page title · <code>now time date</code> the clock</p>
+    <p>a replacement whose name starts with a capital is a component: <code>{_b@ _h@ {{~_h~} h3 {~_b~} p} article.card} Card &gt;&lt;</code>, then <code>{Title} {Body.} Card</code></p>
+    <h4>the editor</h4>
+    <p>braces are zones, coloured by the word that takes them: element, event, <span class="z-try">try</span>, loop, page, style, word. The braces checkbox shows them</p>
+    <p><b>middle-drag</b> a range: the wheel picks what it becomes, release wraps it · <b>middle-click</b> a zone to unwrap or retype it · <code>{</code> with a selection wraps it</p>
+    <p><b>Ctrl+\</b> split into lanes · <b>Alt+Enter</b> add a lane · <b>Alt+Backspace</b> remove it · <b>Ctrl+]</b> merge · <b>Ctrl+Shift+]</b> join · <b>Ctrl+L</b> label · <b>Ctrl+M</b> fold the selected lines into one · <b>F6</b> the minted lines, each one editable: an edit goes to the beads it came from, so every line through them changes; with <i>this line only</i> the touched words become a new fork</p>
+    <p>Zone edges: element square, event round, try double, loop dashed, page tall, word notched, style dotted. A wavy line under <code>r</code> in <code>5 r n</code> marks a command standing where a name belongs; <code>{r}</code> is the name.</p>
+    <p><b>.html</b> compiles: HTML and CSS, and a script only when the page changes · <b>.html + reader</b> carries the whole machine</p>
+  </div>
+  </div>
+</aside>
+
+<script type="module" src="play.js"></script>
+</body>
+</html>

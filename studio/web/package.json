@@ -1,0 +1,13 @@
+{
+  "name": "s-for-the-page",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node test/corpus.mjs && node test/beads.mjs && python3 test/page.py"
+  },
+  "devDependencies": {
+    "acorn": "^8.12.1",
+    "esbuild": "0.24.2"
+  }
+}

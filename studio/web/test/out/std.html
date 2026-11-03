@@ -1,0 +1,996 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title></title>
+</head>
+<body>
+<p class="v" data-s="1">3</p> <button data-s="0">square</button>
+<script>
+var sCore=function(){
+const MARKS={"\u27EA":"fork","\xA6":"lane","\u27EB":"merge","\u2A1D":"join"};
+const ASCII={"[[":"fork","||":"lane","]]":"merge","||>":"join"};
+const MARK_CHAR={fork:"\u27EA",lane:"\xA6",merge:"\u27EB",join:"\u2A1D"};
+class BeadError extends Error{constructor(r,s){super(r),this.at=s}}
+function beadTree(f){let e=0;const u=f.length,s=[];for(;e<u;){const t=f[e];if(!t.m){s.push(t),e++;continue}if(t.m!=="fork")throw new BeadError(`${MARK_CHAR[t.m]} outside a fork`,t.at);s.push(c())}return s;function c(){const t=f[e];let r=t.line;const o=[];let i=!1;for(;e<u;){const n=f[e];if(n.m==="fork"){const a=l();o.push(a),r=a.endLine;continue}if(n.m==="join"){e++,i=!0;break}if(n.m)throw new BeadError(`${MARK_CHAR[n.m]} outside a fork`,n.at);if(n.line!==r)break;o.push(n),e++}return{region:o,joined:i,at:t.at}}function l(){const t=f[e++],r=[[]];let o=-1;for(;;){if(e>=u)throw new BeadError("\u27EA without \u27EB",t.at);const i=f[e],n=r[r.length-1];if(i.m==="merge")return e++,{fork:r,label:t.label||"",at:t.at,endLine:i.line};if(i.m==="lane"){e++,r.push([]),o=-1;continue}if(i.m==="fork"){o<0&&(o=n.length),n.push(l());continue}if(i.m==="join"){if(o<0)throw new BeadError("\u2A1D with no open fork",i.at);const a=n.splice(o);n.push({region:a,joined:!0,at:a[0].at}),o=-1,e++;continue}n.push(i),e++}}}
+function mint(c){const e=new Map;for(const n of c){if(!n.fork)continue;const t=n.fork.length,o=e.get(n.label);if(o===void 0||o===1)e.set(n.label,t);else if(t!==1&&t!==o)throw new BeadError(`this \u27EA has ${t} lanes where its set has ${o}`,n.at)}const l=[...e.keys()];let f=[[]];for(const n of l){const t=[];for(const o of f)for(let s=0;s<e.get(n);s++)t.push([...o,s]);f=t}const i=[];for(const n of f){let t=[[]];for(const o of c){if(!o.fork){for(const r of t)r.push(o);continue}const s=o.fork.length===1?o.fork[0]:o.fork[n[l.indexOf(o.label)]],u=mint(s),a=[];for(const r of t)for(const h of u)a.push(r.concat(h));t=a}i.push(...t)}return i}
+const SUFFIX="?!~$`#;:.@";
+const RESERVED=["=","n","r","rc","rn","$","err","eof","out","threads","_","args","argc","?"];
+const S_EQ=0,S_N=1,S_R=2,S_RC=3,S_RN=4,S_DOLLAR=5,S_ERR=6,S_EOF=7,S_OUT=8,S_UNDER=10,S_ARGS=11,S_ARGC=12,S_Q=13;
+const UNBOUND=1/0;
+function fmtNum(t){if(t===0)return"0";if(Number.isNaN(t))return"NaN";if(t===1/0)return"inf";if(t===-1/0)return"-inf";const r=String(t);if(!r.includes("e"))return r;const e=r.match(/^(-?)(\d)(?:\.(\d+))?e([+-]\d+)$/),f=e[1],n=e[2]+(e[3]||""),i=+e[4];return i>=0?f+(i>=n.length-1?n+"0".repeat(i-(n.length-1)):n.slice(0,i+1)+"."+n.slice(i+1)):f+"0."+"0".repeat(-i-1)+n}
+function rustParse(i){if(!/^[+-]?((\d+\.?\d*|\.\d+)([eE][+-]?\d+)?|inf|infinity|nan)$/i.test(i))return null;const n=i.toLowerCase().replace(/^\+/,"");return n==="inf"||n==="infinity"?1/0:n==="-inf"||n==="-infinity"?-1/0:n==="nan"||n==="-nan"?NaN:Number(i)}
+function parseNum(n){const r=rustParse(n.trim());return r===null?0:r}
+function canonNum(u){const n=rustParse(u);return n===null?null:fmtNum(n)===u?n:null}
+const valOf=n=>{const c=canonNum(n);return c===null?n:c};
+const text=t=>typeof t=="number"?fmtNum(t):typeof t=="string"?t:t.w;
+const num=e=>typeof e=="number"?e:parseNum(text(e));
+function valEq(e,t){return typeof e=="number"&&typeof t=="number"&&!Number.isNaN(e)&&!Number.isNaN(t)?e===t:text(e)===text(t)}
+const isWs=s=>s===" "||s===`
+`||s==="	"||s==="\r";
+const hasWs=s=>/[ \n\t\r]/.test(s);
+function activeForm(r){const n=Array.from(r);return n.length>1&&(n[0]==="\\"||SUFFIX.includes(n[n.length-1]))}
+const CMDS=[">",">_","<","<_","w","+w","mv","r","r@","?)","&&&","***","n","+","-","*","/","^","%","!!","=","!=",";","&","==","<<",">>","<<=",">>=","l","-l","[l]","l=","l-","#l","/l","l/","#s","f","+f","@f","f-","f_","_f","?eof","t","-t","<t",">t","#prng","`prng","><","//","<-","<--","(",")","~","##","tcp"];
+const CMD_SET=new Set(CMDS);
+const cmdOf=c=>CMD_SET.has(c)?c:null;
+class Interner{constructor(){this.map=new Map,this.names=[],this.local=[];for(const t of RESERVED)this.sym(t)}sym(t){let s=this.map.get(t);return s!==void 0||(s=this.names.length,this.names.push(t),this.local.push(t.length>1&&t[0]===":"),this.map.set(t,s)),s}name(t){return this.names[t]}}
+function classify(c,s){const o=cmdOf(c);if(o)return["cmd",o];const n=Array.from(c);if(n.length>1&&n[0]==="\\"){const r=n.slice(1).join(""),u=cmdOf(r);if(u)return["native",u];const t=classify(r,s);return t[0]==="word"?["push",valOf(t[1])]:t}const a=n[n.length-1],e=n.slice(0,-1).join("");if(e)switch(a){case"?":return["cond",!0,classify(e,s)];case"!":return["cond",!1,classify(e,s)];case"~":return["lookup",s.sym(e)];case"@":return["pop",s.sym(e)];case"$":return["def",s.sym(e)];case"`":return["setmem",s.sym(e)];case"#":return["setnum",s.sym(e)];case";":return["inc",s.sym(e)];case":":return["dec",s.sym(e)];case".":{const r=Array.from(e);return r.length>1&&r[r.length-1]==="."?["callpass",s.sym(r.slice(0,-1).join(""))]:["call",s.sym(e)]}}return["word",c,s.sym(c),canonNum(c)]}
+function classifyAngle(n,r,o){if(!r)return["word",n,o.sym(n),null];if(r==="..")return["callpass",o.sym(n)];const c=Array.from(r),l=c[c.length-1],e=c.slice(0,-1).join("");if(l==="?"||l==="!")return["cond",l==="?",classifyAngle(n,e,o)];if(e)throw new Error(`\u27E8${n}\u27E9${r}: unknown suffix`);const f={"~":"lookup","@":"pop",$:"def","`":"setmem","#":"setnum",";":"inc",":":"dec",".":"call"}[l];if(!f)throw new Error(`\u27E8${n}\u27E9${r}: unknown suffix`);return[f,o.sym(n)]}
+function brace(n,h,o){const r=n.length;let s=1,e=h+1,l="";const f=[];for(;e<r;){const t=n[e];if(t==="{")s++,l+=t,e++;else if(t==="}"){if(s--,s===0)return l&&f.push(["T",l]),[f,e+1];l+=t,e++}else if(t==="~"&&s===1){let i=e+1;for(;i<r&&n[i]!=="~"&&n[i]!=="{"&&n[i]!=="}"&&!isWs(n[i]);)i++;i<r&&n[i]==="~"?(i===e+1?l+="~":(l&&(f.push(["T",l]),l=""),f.push(["V",o.sym(n.slice(e+1,i).join(""))])),e=i+1):(l+="~",e++)}else l+=t,e++}throw new Error("unclosed {")}
+function litOp(s,f){const n=[];for(const t of[["T",s],...f]){if(t[0]==="T"&&!t[1])continue;const e=n[n.length-1];t[0]==="T"&&e&&e[0]==="T"?e[1]+=t[1]:n.push([...t])}return n.every(t=>t[0]==="T")?["push",valOf(n.length?n[n.length-1][1]:"")]:["interp",n]}
+function parse(f,u){const n=Array.from(f),o=n.length,r=[],c=[];let s=0;for(;s<o;){if(isWs(n[s])){s++;continue}const p=s;if(n[s]==="\u27E8"){let e=s+1;for(;e<o&&n[e]!=="\u27E9";)e++;if(e>=o)throw new Error("unclosed \u27E8");const l=n.slice(s+1,e).join("");let t=e+1;for(;t<o&&!isWs(n[t]);)t++;r.push(classifyAngle(l,n.slice(e+1,t).join(""),u)),c.push(p),s=t;continue}let i="",h=!1,a=p;for(;s<o&&!isWs(n[s]);){const e=n[s];if(MARKS[e]){i&&(r.push(classify(i,u)),c.push(a),i="");let l="";if(MARKS[e]==="fork"){const t=/^([A-Za-z_][\w-]*):(?=[^\s⟪¦⟫⨝])/.exec(n.slice(s+1,s+40).join(""));t&&(l=t[1],s+=Array.from(t[0]).length)}r.push(["mark",MARKS[e],l]),c.push(s),s++,a=s;continue}if(e==="{"){const[l,t]=brace(n,s,u);r.push(litOp(i,l)),i="",c.push(a),s=t,h=!0;break}else if(e==="'"){let l=s+1;for(;l<o&&n[l]!=="'";)l++;if(l>=o)throw new Error("unclosed '");r.push(["push",valOf(i+n.slice(s+1,l).join(""))]),i="",c.push(a),s=l+1,h=!0;break}else i+=e,s++}if(!h&&i){const e=ASCII[i]?[ASCII[i],""]:/^\[\[([A-Za-z_][\w-]*):$/.test(i)?["fork",i.slice(2,-1)]:null;r.push(e?["mark",e[0],e[1]]:classify(i,u)),c.push(a)}}return groupLanes({ops:r,spans:c,src:f,unit:-1},n,u)}
+function groupLanes(s,h,i){if(!s.ops.some(e=>e[0]==="mark"))return s;const f=[];let p=0;for(let e=0;e<=h.length;e++)f.push(p),h[e]===`
+`&&p++;const k=s.ops.map((e,t)=>e[0]==="mark"?{m:e[1],label:e[2],at:s.spans[t],line:f[s.spans[t]]}:{v:e,at:s.spans[t],line:f[s.spans[t]]});let m;try{m=beadTree(k)}catch(e){throw e instanceof BeadError?new Error(`at ${e.at}: ${e.message}`):e}const c=e=>{const t=[],a=[];for(const r of e)r.region?(t.push(u(r)),a.push(r.at)):(t.push(r.v),a.push(r.at));return{ops:t,spans:a,src:s.src,unit:s.unit}},u=e=>{const t=e.region.filter(n=>n.fork);if(t.length===1&&t[0].fork.length===1&&t[0].fork[0].length===1&&t[0].fork[0][0].v){const n=t[0].fork[0][0].v,o=n[0]==="word"&&n[1].endsWith("\u2026")&&n[1].length>1?n[1].slice(0,-1):n[0]==="callpass"&&i.name(n[1]).endsWith(".")?i.name(n[1]).slice(0,-1):null;if(o)return["lanes",{spread:i.sym(o),shared:c(e.region.filter(l=>!l.fork)),lanes:[],at:e.at}]}let a;try{a=mint(e.region)}catch(n){throw n instanceof BeadError?new Error(`at ${n.at}: ${n.message}`):n}const r=t.every(n=>n.fork.every(o=>o.every(l=>l.v&&l.v[0]==="push")));return["lanes",{lanes:a.map(c),simd:r,at:e.at}]},g=c(m);return g.unit=s.unit,g}
+const M64=(1n<<64n)-1n;
+const rotl=(t,n)=>(t<<BigInt(n)|t>>BigInt(64-n))&M64;
+function splitmix(B){B.z=B.z+0x9E3779B97F4A7C15n&M64;let n=B.z;return n=(n^n>>30n)*0xBF58476D1CE4E5B9n&M64,n=(n^n>>27n)*0x94D049BB133111EBn&M64,n^n>>31n}
+class Rng{constructor(t,n){const s={z:(t^rotl(n,32))&M64};this.s=[splitmix(s),splitmix(s),splitmix(s),splitmix(s)]}next(){const t=this.s,n=rotl(t[1]*5n&M64,7)*9n&M64,s=t[1]<<17n&M64;return t[2]^=t[0],t[3]^=t[1],t[1]^=t[2],t[0]^=t[3],t[2]^=s,t[3]=rotl(t[3],45),n}f64(){return Number(this.next()>>11n)/2**53}}
+const u64=t=>BigInt.asUintN(64,BigInt(Math.trunc(t)));
+const osU64=()=>BigInt(Math.floor(Math.random()*4294967296))<<32n|BigInt(Math.floor(Math.random()*4294967296));
+class SErr extends Error{}
+class SExit extends Error{constructor(r){super("exit "+r),this.code=r}}
+class Reads extends Map{add(s){return this.set(s,(this.get(s)||0)+1),this}sub(s){const t=(this.get(s)||0)-1;t>0?this.set(s,t):this.delete(s)}}
+class Rt{constructor(s={}){this.it=new Interner,this.args=[],this.ow=!1,this.mem=[],this.nums=[],this.scripts=[],this.lists=[],this.repl=new Map,this.replNum=!1,this.gen=1,this.bound=UNBOUND,this.frames=[],this.units=new Map,this.unitIds=new Map,this.rng=null,this.fs=[],this.touched=[],this.lmap=new Map,this.site=[-1,0],this.ops=0,this.lib=s.lib||{},this.vfs=s.vfs||new Map,this.write=s.write||(t=>{typeof process<"u"&&process.stdout.write(t)}),this.handles=new Map,this.hostWord=null,this.stdin=s.stdin||null,this.shell=s.shell||null,this.natives=new Map,this.reads=null,this.writes=null,this.tracking=!1,this.lastInterp=null,this.laneAt=null,this.laneStack=[],this.lanesJoined=null,this.laneView=null,this.onJoin=null,this.B={n:1/0},laneWords(this)}}
+Rt.prototype.native=function(t,s){this.natives.set(t,s);const i={val:t,code:{n:s},gen:0,nat:t};this.repl.has(t)||this.repl.set(t,[]),this.repl.get(t).unshift(i)};
+Rt.prototype.fail=function(t){throw new SErr(this.laneAt!==null?`lane ${this.laneAt}: ${t}`:t)};
+Rt.prototype.pop=function(t){return this.args.length||this.fail(`${t}: stack is empty`),this.args.pop()};
+Rt.prototype.name=function(e){const n=this.it.name(e),t=n.indexOf("");return t<0?n:n.slice(0,t)};
+Rt.prototype.l=function(t){return this.it.local[t]?this.localSym(t):t};
+Rt.prototype.localSym=function(i){const s=Math.max(0,this.fs.length-1),e=i+","+s;let t=this.lmap.get(e);return t===void 0&&(t=this.it.sym(this.it.name(i)+""+s),this.it.local[t]=!1,this.lmap.set(e,t)),this.touch(s,t),t};
+Rt.prototype.touch=function(t,h){for(;this.touched.length<=t;)this.touched.push([]);this.touched[t].includes(h)||this.touched[t].push(h)};
+Rt.prototype.clearLocals=function(t){if(t<this.touched.length&&this.touched[t].length){for(const e of this.touched[t])this.mem[e]=void 0,this.nums[e]=void 0,this.lists[e]=void 0,this.scripts[e]=void 0;this.touched[t]=[]}};
+Rt.prototype.visible=function(e){const t=this.repl.get(e);if(!t)return null;for(let n=t.length-1;n>=0;n--)if(t[n].gen<this.bound)return t[n];return null};
+Rt.prototype.tryExpand=function(e){const s=this.visible(e);if(!s)return!1;if(!s.code)this.args.push(s.val);else if(s.code.n){const t=this.bound;this.bound=s.gen,s.code.n(this),this.bound=t}else this.fs.push({body:{ops:s.code.u},pc:0,bound:s.gen,lib:s.lib});return!0};
+Rt.prototype.wordRc=function(r,i,t){if(t!==null){if(this.replNum&&this.tryExpand(r))return;this.args.push(t);return}this.preWord&&this.preWord(r)||this.repl.size&&this.tryExpand(r)||this.hostWord&&this.hostWord(this,r)||this.args.push({w:r,k:i})};
+Rt.prototype.cmdSite=function(t){return this.repl.size&&this.tryExpand(t)?!1:this.cmd(t)};
+Rt.prototype.popTo=function(t){t=this.l(t),this.args.length||this.fail(`${this.name(t)}@: stack is empty`),this.mset(t,this.args.pop())};
+Rt.prototype.need=function(t,s){this.args.length<t&&this.fail(`${s}: needs ${t} args, stack has ${this.args.length}`)};
+Rt.prototype.t=function(t){return text(this.args[t])};
+Rt.prototype.optT=function(t){return t<this.args.length?text(this.args[t]):null};
+Rt.prototype.x=function(t){return num(this.args[t])};
+Rt.prototype.argSym=function(o){const t=this.args[o],s=typeof t=="object"?t.k:this.it.sym(text(t));return this.l(s)};
+Rt.prototype.dest=function(t,r){return this.args.length>t?this.argSym(t):r};
+Rt.prototype.nset=function(t,i){this.nums[t]=i,this.writes&&this.writes.add(t)};
+Rt.prototype.mset=function(t,i){this.mem[t]=i,this.writes&&this.writes.add(t)};
+Rt.prototype.wrote=function(t){this.writes&&this.writes.add(t)};
+Rt.prototype.read=function(t){this.reads&&this.reads.add(t)};
+Rt.prototype.getVal=function(t){return this.reads&&this.reads.add(t),this.mem[t]!==void 0?this.mem[t]:this.nums[t]!==void 0?this.nums[t]:t===S_Q?String(osU64()):"404"};
+Rt.prototype.interp=function(t){return text(this.getVal(this.l(t)))};
+Rt.prototype.lookup=function(t){return t=this.l(t),!this.replNum&&this.mem[t]===void 0&&this.nums[t]!==void 0?(this.read(t),this.args.push(this.nums[t]),!1):this.dispatch(this.getVal(t))};
+Rt.prototype.dispatch=function(s){let t=null;if(typeof s=="number"){if(this.replNum&&this.tryExpand(fmtNum(s)))return!1}else if(typeof s=="object"){if(this.repl.size&&this.tryExpand(s.w)||this.hostWord&&this.hostWord(this,s.w,!0))return!1}else t=s;if(t!==null&&t&&!hasWs(t)){const r=cmdOf(t);if(r)return this.cmdSite(r);if(activeForm(t)||t[0]==="\u27E8"){let i;if(t[0]==="\u27E8"){let e;try{e=parse(t,this.it)}catch{e=null}if(!e||e.ops.length!==1)return this.args.push(s),!1;i=e.ops[0]}else i=classify(t,this.it);return this.step(i,!1)==="done"}if(this.repl.size&&this.tryExpand(t)||this.hostWord&&this.hostWord(this,t,!0))return!1}return this.args.push(s),!1};
+Rt.prototype.joined=function(){return this.args.map(text).join(" ")};
+Rt.prototype.setMem=function(t){t=this.l(t);const s=this.args.length===1?this.args.pop():valOf(this.joined());this.args=[],this.mset(t,s)};
+Rt.prototype.setNum=function(t){t=this.l(t);const s=this.args.length?num(this.args[0]):0;this.args=[],this.nset(t,s)};
+Rt.prototype.incBy=function(t,i){t=this.l(t);let s=1;this.args.length&&(s=num(this.args[0]),this.args=[]);const n=this.nums[t]??0;this.nset(t,n+i*s)};
+Rt.prototype.codeOf=function(t){let i=this.units.get(t);return i||(i=this.reader?this.reader(t):parse(t,this.it),i.unit=this.unitIds.has(t)?this.unitIds.get(t):-1,this.units.size>4096&&this.units.clear(),this.units.set(t,i),i)};
+Rt.prototype.defScript=function(t){t=this.l(t);const i=this.joined().replace(/\|/g,"~");this.args=[];let s;try{s=this.codeOf(i)}catch(e){this.fail(`${this.name(t)}$: ${e.message}`)}this.scripts[t]={u:s,b:this.gen}};
+Rt.prototype.libTexts=function(){return this._libTexts||(this._libTexts=new Set(Object.values(this.lib)))};
+Rt.prototype.inLib=function(){const t=this.fs[this.fs.length-1];return!!(t&&t.lib)};
+Rt.prototype.libSrc=function(t){const l=t.replace(/^\.\//,"");return this.lib[l]??null};
+Rt.prototype.fileText=function(e){const t=e.replace(/^\.\//,"");return this.vfs.has(t)?this.vfs.get(t):this.libSrc(t)};
+Rt.prototype.frameFor=function(n){const t=this.scripts[n];if(t)return t.n?(t.n(this),null):{body:{ops:t.u},pc:0,bound:t.b};const i=this.name(n);if(this.fileFrame&&this.fileText(i)!==null)return this.fileFrame(i);this.fail(`${i}.: no script or file named '${i}'`)};
+Rt.prototype.call=function(f){const t=this.frameFor(f);t&&this.fs.push(t)};
+Rt.prototype.count=function(r,n){const t=this.args[r],e=typeof t=="number"?t:rustParse(text(t).trim())??NaN;if(Number.isFinite(e)&&e>=0&&Number.isInteger(e))return e;this.fail(`${n}: repeat count must be a whole number >= 0, got '${text(t)}'`)};
+Rt.prototype.repeat=function(t){const n=this.count(0,this.name(t)+".");this.fs.push({body:{rep:{k:t,i:0,n,amp:!1}},pc:0,bound:this.bound})};
+Rt.prototype.srcFrame=function(e){let t;try{t=this.codeOf(e)}catch(o){this.fail("parse: "+o.message)}return{body:{ops:t},pc:0,bound:UNBOUND}};
+Rt.prototype.runSrc=function(t){this.fs.push(this.srcFrame(t))};
+Rt.prototype.hostFrame=function(o){return{body:{host:o},pc:0,bound:this.bound}};
+Rt.prototype.guarded=function(t){try{return t(this),null}catch(r){return this.statusOf(r)}};
+Rt.prototype.statusOf=function(e){let t;if(e instanceof SErr)t={error:e.message};else if(e instanceof SExit)t={exit:e.code};else if(e instanceof RangeError)t={error:"too deep: "+e.message};else throw e;for(this.resetFrames(),this.laneView&&this.endView();this.laneStack.length;)this.useState(this.laneStack.pop().fork);return this.laneAt=null,t};
+Rt.prototype.resetFrames=function(){for(;this.fs.length;)this.fs.pop(),this.clearLocals(this.fs.length)};
+Rt.prototype.runText=function(t,n=1/0){const r=this.guarded(u=>u.runSrc(t));return r||this.run(n)};
+Rt.prototype.run=function(t=1/0){t>Number.MAX_SAFE_INTEGER&&(t=Number.MAX_SAFE_INTEGER);const s={n:t},i=this.B;this.B=s;try{const n=this.runTo(0);return this.ops+=t-s.n,n}catch(n){return this.ops+=t-s.n,this.statusOf(n)}finally{this.B=i}};
+Rt.prototype.runTo=function(t){for(;;)try{return this.runInner(this.B,t)}catch(r){if(!(r instanceof SErr)||!this.recover||!this.recover(r,t))throw r}};
+Rt.prototype.recover=function(h,e){let t=this.fs.length-1;for(;t>=e&&!this.fs[t].catch;)t--;if(t<e)return!1;const s=this.fs[t].catch;for(;this.fs.length>t;)this.fs.pop(),this.clearLocals(this.fs.length);for(this.frames.length=Math.min(this.frames.length,s.frames);this.laneStack.length>s.lanes;)this.useState(this.laneStack.pop().fork);return this.laneAt=s.laneAt,this.args=[],this.mset(S_ERR,valOf(h.message)),this.runSrc(s.h),!0};
+Rt.prototype.st=function(t){this.fs.length>t+1&&this.runTo(t+1),this.bound=this.fs[t].bound};
+Rt.prototype.endFrame=function(t){this.clearLocals(t),this.fs.splice(t,1),t<this.touched.length&&this.touched.splice(t,1)};
+Rt.prototype.tailInto=function(s,e){this.clearLocals(s);const t=this.frameFor(e);if(t)if(this.fs.length>s+1){const f=this.fs.splice(s+1);this.fs[s]=t,this.fs.push(...f)}else this.fs[s]=t;else this.endFrame(s)};
+Rt.prototype.canFastTail=function(t){return this.fs.length===t+1&&!(this.touched[t]&&this.touched[t].length)};
+Rt.prototype.runInner=function(s,r=0){for(;;){const o=this.fs.length;if(o<=r)return"done";if(s.n<=0)return"ran";const t=o-1,i=this.fs[t];this.bound=i.bound;const n=i.body;if(n.ops&&n.ops.fn){s.n--;const e=n.ops.fn(this,t);e&&e.tail!==void 0?this.tailInto(t,e.tail):this.endFrame(t)}else if(n.ops){if(this.interpret(s,t,i))return"ran"}else n.rep?(s.n--,this.repStep(t,n.rep)):n.host&&(s.n--,this.endFrame(t),n.host(this))}};
+Rt.prototype.interpret=function(l,t,p){let i=p.body.ops,h=i.ops.length,s=p.pc;for(;;){let n="end",f=0;for(;s<h;){if(l.n<=0)return this.fs[t].pc=s,!0;l.n--,this.site=[i.unit,s],this.siteCode=i;const e=i.ops[s];s++;const o=this.step(e,s===h);if(o==="done"){this.fs.length=t+1,n="end";break}if(o&&o.tail!==void 0){n="tail",f=o.tail;break}if(this.fs.length!==t+1){n="pushed";break}}if(n==="end")this.endFrame(t);else if(n==="pushed")s===h?this.endFrame(t):this.fs[t].pc=s;else{if(this.canFastTail(t)){const e=this.scripts[f];if(e&&e.u){this.fs[t].body={ops:e.u},this.fs[t].bound=e.b,this.fs[t].pc=0,this.bound=e.b,i=e.u,h=i.ops.length,s=0;continue}}this.tailInto(t,f)}return!1}};
+Rt.prototype.repStep=function(i,t){if(t.i<t.n){const s=t.i;t.i++,t.amp&&this.nset(S_N,s),this.args=[],this.call(t.k)}else this.args=[],this.endFrame(i)};
+Rt.prototype.step=function(e,t){switch(e[0]){case"push":this.args.push(e[1]);break;case"interp":this.interpOp(e[1]);break;case"lanes":this.lanesOp(e[1]);break;case"word":this.wordRc(e[1],e[2],e[3]);break;case"cmd":if(this.cmdSite(e[1]))return"done";break;case"native":if(this.cmd(e[1]))return"done";break;case"pop":this.popTo(e[1]);break;case"lookup":if(this.lookup(e[1]))return"done";break;case"def":this.defScript(e[1]);break;case"setmem":this.setMem(e[1]);break;case"setnum":this.setNum(e[1]);break;case"inc":this.incBy(e[1],1);break;case"dec":this.incBy(e[1],-1);break;case"call":{const s=this.l(e[1]);if(t)return this.args.length===1?(this.repeat(s),null):{tail:s};this.args.length===1?this.repeat(s):this.call(s);break}case"callpass":{const s=this.l(e[1]);if(t)return{tail:s};this.call(s);break}case"cond":if(this.ow===e[1])return this.step(e[2],t);break}return null};
+Rt.prototype.interpOp=function(n){const i=this.reads,t=this.tracking?new Set:null;t&&(this.reads=t);let e="";for(const s of n)e+=s[0]==="T"?s[1]:this.interp(s[1]);this.reads=i;const o=valOf(e);if(this.args.push(o),t){if(i)for(const s of t)i.add(s);this.lastInterp={v:o,parts:n,reads:t,at:this.args.length}}};
+Rt.prototype.state=function(){return{mem:this.mem,nums:this.nums,lists:this.lists,scripts:this.scripts,repl:this.repl}};
+Rt.prototype.useState=function(t){this.mem=t.mem,this.nums=t.nums,this.lists=t.lists,this.scripts=t.scripts,this.repl=t.repl};
+Rt.prototype.copyState=function(e){return{mem:e.mem.slice(),nums:e.nums.slice(),lists:e.lists.map(s=>s&&s.slice()),scripts:e.scripts.slice(),repl:new Map([...e.repl].map(([s,t])=>[s,t.slice()]))}};
+Rt.prototype.laneWrites=function(n,l){const c=new Set,o=new Set,g=Math.max(n.mem.length,n.nums.length,n.lists.length,n.scripts.length);for(let e=0;e<g;e++){const s=n.lists[e],t=l.lists[e],m=s!==t&&(!s||!t||s.length!==t.length||s.some((i,h)=>i!==t[h]));(n.mem[e]!==l.mem[e]||n.nums[e]!==l.nums[e]||n.scripts[e]!==l.scripts[e]||m)&&c.add(e)}for(const[e,s]of n.repl){const t=l.repl.get(e);(!t||t.length!==s.length||s.some((m,i)=>m!==t[i]))&&o.add(e)}return{names:c,repl:o}};
+Rt.prototype.lanesOp=function(e){const h=this.args,s={L:e,fork:this.state(),lanes:[],laneAt:this.laneAt,view:this.laneView,ow0:this.ow};this.endView(),this.laneStack.push(s);const i=e.spread!=null?(this.lists[this.l(e.spread)]||[]).slice():null,o=i?i.length:e.lanes.length,l=this.bound;let t=-1;const n=()=>{if(t>=0){const a=this.state();s.lanes[t]={args:this.args,st:a,w:this.laneWrites(a,s.fork)},this.useState(s.fork)}if(t++,t>=o){this.joinLanes(s,h);return}this.fs.push(this.hostFrame(n)),this.args=i?[...h,i[t]]:h.slice(),this.useState(this.copyState(s.fork)),this.laneAt=t,this.ow=s.ow0,this.fs.push({body:{ops:i?e.shared:e.lanes[t]},pc:0,bound:l})};this.fs.push(this.hostFrame(n)),this.args=[]};
+Rt.prototype.joinLanes=function(t,i){this.useState(t.fork),this.ow=t.ow0,this.laneStack.pop(),this.laneAt=t.laneAt,this.args=i,this.lanesJoined=t,this.onJoin&&this.onJoin(t)};
+Rt.prototype.joinedLanes=function(n){return this.lanesJoined||this.fail(`${n}: no joined lanes`),this.lanesJoined.lanes};
+Rt.prototype.viewLane=function(e){this.endView();const t=this.joinedLanes("lane")[e];t||this.fail(`lane: no lane ${e}, there are ${this.lanesJoined.lanes.length}`);const i=[];for(const s of t.w.names)i.push([s,this.mem[s],this.nums[s],this.lists[s],this.scripts[s]]),this.mem[s]=t.st.mem[s],this.nums[s]=t.st.nums[s],this.lists[s]=t.st.lists[s],this.scripts[s]=t.st.scripts[s];const n=[];for(const s of t.w.repl)n.push([s,this.repl.get(s)]),this.repl.set(s,t.st.repl.get(s));this.laneView={lane:t,saved:i,savedR:n}};
+Rt.prototype.endView=function(){const i=this.laneView;if(!i)return;const t=i.lane.st;for(const[s,e,l,n,h]of i.saved)this.mem[s]===t.mem[s]&&(this.mem[s]=e),this.nums[s]===t.nums[s]&&(this.nums[s]=l),this.lists[s]===t.lists[s]&&(this.lists[s]=n),this.scripts[s]===t.scripts[s]&&(this.scripts[s]=h);for(const[s,e]of i.savedR)this.repl.get(s)===t.repl.get(s)&&(e?this.repl.set(s,e):this.repl.delete(s));this.laneView=null};
+Rt.prototype.onErr=function(t,s){if(this.args.length>t){const i=this.t(t);this.args=[],this.mset(S_ERR,valOf(s)),this.runSrc(i)}else this.fail(s)};
+Rt.prototype.list=function(t){return this.lists[t]||(this.lists[t]=[]),this.lists[t]};
+Rt.prototype.seedOf=function(){return this.args.length?this.args.length===1?[u64(this.x(0)),0n]:[u64(this.x(0)),u64(this.x(1))]:null};
+Rt.prototype.cmd=function(t){const i=CMD[t];i||this.fail(`${t}: not part of this page`);const n=i.call(this,t);return n!==void 0?n:(this.args=[],!1)};
+function arith(t){this.need(2,t);const h=this.x(0),s=this.x(1);let i=t==="+"?h+s:t==="-"?h-s:t==="*"?h*s:t==="/"?h/s:t==="^"?Math.pow(h,s):h%s;t==="%"&&i<0&&(i+=Math.abs(s)),this.nset(this.dest(2,S_EQ),i)}
+function compare(n){this.need(2,n);const m=this.args[0],u=this.args[1];this.ow=n==="="?valEq(m,u):n==="!="?!valEq(m,u):n===";"?this.ow&&!valEq(m,u):n==="&"?this.ow&&valEq(m,u):n==="=="?num(m)===num(u):n==="<<"?num(m)<num(u):n===">>"?num(m)>num(u):n==="<<="?num(m)<=num(u):num(m)>=num(u)}
+function noThreads(e){this.fail(`${e}: threads and the network are not part of the browser machine`)}
+function prng(n){const e=n.seedOf();return e?n.rng=new Rng(e[0],e[1]):n.rng||(n.rng=new Rng(osU64(),osU64())),n.rng}
+const CMD={};
+CMD[">"]=function(){this.write(`
+`+this.args.map(t=>" "+text(t)).join(""))};
+CMD[">_"]=function(){this.write(this.args.map(text).join(""))};
+CMD["<"]=function(e){this.need(1,e);const s=this.t(0);this.shell||this.fail("<: no shell in the browser");let t;try{t=this.shell(s)}catch(h){this.fail(`<: ${s}: ${h.message}`)}this.mset(S_R,valOf(t.out)),this.nset(S_RC,t.code)};
+CMD["<_"]=function(){const s=this.dest(0,S_UNDER),t=this.stdin?this.stdin():null;this.mset(s,valOf(t===null?"":t)),this.mset(S_EOF,t===null?1:0)};
+CMD.w=function(t){this.need(2,t),this.vfs.set(this.t(0),this.t(1))};
+CMD["+w"]=function(t){this.need(2,t),this.vfs.set(this.t(0),(this.vfs.get(this.t(0))||"")+this.t(1))};
+CMD.mv=function(i){this.need(2,i);const s=this.t(0),t=this.t(1);this.vfs.has(s)||this.fail(`mv: ${s} ${t}: No such file or directory (os error 2)`),this.vfs.set(t,this.vfs.get(s)),this.vfs.delete(s)};
+CMD.r=function(i){this.need(1,i);const t=this.t(0),r=this.args.length>1?this.argSym(1):this.argSym(0),s=this.fileText(t);s===null&&this.fail(`r: ${t}: No such file or directory (os error 2)`),this.mset(r,valOf(s))};
+CMD["r@"]=function(i){this.need(4,i);const e=this.t(0),t=this.x(1),o=this.x(2),n=this.argSym(3),s=this.fileText(e);s===null&&this.fail(`r@: ${e}: No such file or directory (os error 2)`);const c=new TextEncoder().encode(s).slice(t,t+o);this.mset(n,valOf(new TextDecoder().decode(c)))};
+CMD["?)"]=function(l){this.need(2,l);const n=this.t(0),o=this.t(1),h=this.optT(2);this.args=[];const e=n.split(/\s+/).filter(Boolean);let s=null;for(let t=0;t+1<e.length;t+=2)if(e[t]===o){s=e[t+1];break}const i=s??h;return i!==null&&this.runSrc(i),!1};
+CMD["&&&"]=function(t){this.need(2,t);const n=this.count(0,"&&&"),s=this.argSym(1);this.fs.push({body:{rep:{k:s,i:0,n,amp:!0}},pc:0,bound:this.bound})};
+CMD["***"]=noThreads;
+CMD.t=noThreads;
+CMD["-t"]=noThreads;
+CMD["<t"]=noThreads;
+CMD[">t"]=noThreads;
+CMD.tcp=noThreads;
+CMD.n=function(t){this.need(2,t);const n=this.x(0);this.nset(this.argSym(1),n)};
+CMD["+"]=arith;
+CMD["-"]=arith;
+CMD["*"]=arith;
+CMD["/"]=arith;
+CMD["^"]=arith;
+CMD["%"]=arith;
+CMD["!!"]=function(){this.ow=!this.ow};
+CMD["="]=compare;
+CMD["!="]=compare;
+CMD[";"]=compare;
+CMD["&"]=compare;
+CMD["=="]=compare;
+CMD["<<"]=compare;
+CMD[">>"]=compare;
+CMD["<<="]=compare;
+CMD[">>="]=compare;
+CMD.l=function(t){this.need(2,t);const i=this.args[0],s=this.argSym(1);this.list(s).push(i),this.wrote(s)};
+CMD["-l"]=function(i){this.need(1,i);const t=this.argSym(0),s=this.list(t);this.wrote(t),this.mset(S_DOLLAR,s.length?s.pop():"404")};
+CMD["[l]"]=function(h){this.need(3,h);const s=this.argSym(0);let t=Math.trunc(this.x(1));const n=this.argSym(2);this.read(s);const i=this.list(s);t<0&&(t+=i.length),t>=0&&t<i.length&&this.mset(n,i[t])};
+CMD["l="]=function(h){this.need(3,h);const n=this.args[0],s=this.argSym(1);let t=Math.trunc(this.x(2));const i=this.list(s);this.wrote(s),t<0&&(t+=i.length),t>=0&&t<i.length&&(i[t]=n)};
+CMD["l-"]=function(i){this.need(1,i);const t=this.argSym(0);this.lists[t]=void 0,this.wrote(t)};
+CMD["#l"]=function(i){this.need(1,i);const t=this.argSym(0);this.read(t);const s=this.lists[t];this.nset(this.dest(1,S_EQ),s?s.length:0)};
+CMD["/l"]=function(l){this.need(2,l);const t=this.t(0),i=this.argSym(1),s=this.optT(2),n=s===null?t.split(/[ \n\t\r\f\v]+/).filter(Boolean):s===""?Array.from(t):t.split(s);this.lists[i]=n.map(valOf),this.wrote(i)};
+CMD["l/"]=function(i){this.need(2,i);const t=this.argSym(0),h=this.argSym(1),e=this.optT(2)??" ";this.read(t);const s=this.lists[t];this.mset(h,valOf(s?s.map(text).join(e):""))};
+CMD["#s"]=function(t){this.need(1,t);const s=Array.from(text(this.args[0])).length;this.nset(this.dest(1,S_EQ),s)};
+CMD.f=function(i){this.need(3,i);const s=this.t(0),e=this.t(2),f=this.argSym(1);let t=this.vfs.get(s);if(t===void 0){if(e[0]==="r")return this.onErr(3,`f: ${s}: No such file or directory (os error 2)`),!1;t=""}e[0]==="w"&&(t=""),this.vfs.set(s,t),this.handles.set(f,{path:s,pos:e[0]==="a"?t.length:0,eof:!1})};
+CMD["+f"]=function(f){this.need(3,f);const e=this.argSym(0),t=this.x(1),i=this.argSym(2),s=this.handles.get(e);if(!s)return this.onErr(3,`+f: ${this.name(e)}: no open file`),!1;const n=this.mem[i]!==void 0?text(this.mem[i]):"",h=this.vfs.get(s.path);this.vfs.set(s.path,h.slice(0,t).padEnd(t,"\0")+n+h.slice(t+n.length))};
+CMD["@f"]=function(n){this.need(4,n);const s=this.argSym(0),i=this.x(1),h=this.x(2),f=this.argSym(3),t=this.handles.get(s);t||this.fail(`@f: ${this.name(s)}: no open file`);const e=this.vfs.get(t.path).slice(i,i+h);t.eof=e.length<h,this.mset(f,valOf(e))};
+CMD["f-"]=function(e){this.need(1,e),this.handles.delete(this.argSym(0))};
+CMD.f_=function(h){this.need(2,h);const e=this.argSym(0),s=this.handles.get(e);if(!s)return this.onErr(2,`f_: ${this.name(e)}: no open file`),!1;const n=this.vfs.get(s.path),t=this.t(1)+`
+`;this.vfs.set(s.path,n.slice(0,s.pos)+t+n.slice(s.pos+t.length)),s.pos+=t.length};
+CMD._f=function(f){this.need(2,f);const n=this.argSym(0),h=this.argSym(1),t=this.handles.get(n);t||this.fail(`_f: ${this.name(n)}: no open file`);const e=this.vfs.get(t.path);if(t.pos>=e.length){t.eof=!0,this.mset(h,"");return}let s=e.indexOf(`
+`,t.pos);s<0&&(s=e.length);let i=e.slice(t.pos,s);t.pos=Math.min(e.length,s+1),i.endsWith("\r")&&(i=i.slice(0,-1)),this.mset(h,valOf(i))};
+CMD["?eof"]=function(e){this.need(1,e);const t=this.handles.get(this.argSym(0));this.mset(S_EOF,!t||t.eof?1:0)};
+CMD["#prng"]=function(){const t=prng(this);this.nset(this.dest(2,S_RN),t.f64())};
+CMD["`prng"]=function(){const s="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",e=prng(this),i=this.dest(2,S_RN);let t="";for(let n=0;n<32;n++)t+=s[Number(e.next()%52n)];this.mset(i,valOf(t))};
+CMD["><"]=function(i){this.need(2,i);const t=this.t(1),e=this.args[0];let s=null;try{s=this.codeOf(text(e))}catch{}canonNum(t)!==null&&(this.replNum=!0);const h=this.gen++;this.repl.has(t)||this.repl.set(t,[]);const l=!!(this.siteCode&&this.libTexts().has(this.siteCode.src));this.repl.get(t).push({val:e,code:s?{u:s}:null,gen:h,lib:l})};
+CMD["("]=function(t){this.need(1,t);const s=this.args.length-1,n=this.count(s,"(");this.args.pop();const e=Math.min(n,s);return this.frames.push(this.args.splice(0,s-e)),!1};
+CMD[")"]=function(){const s=this.frames.pop();return s||this.fail("): no open frame"),this.args=s.concat(this.args),!1};
+CMD["~"]=function(){return this.args.length||this.fail("~: stack is empty"),this.runSrc(text(this.args.pop())),!1};
+CMD["##"]=function(){return this.args.push(this.args.length),!1};
+CMD["//"]=function(){};
+CMD["<-"]=function(){return!0};
+CMD["<--"]=function(){throw new SExit(this.args.length?Math.trunc(num(this.args[0])):0)};
+function laneWords(rt) {const w=(t,n)=>rt.native(t,n);
+w("lanes",e=>{e.args.push(e.joinedLanes("lanes").length)});
+w("lane",a=>{const n=a.count(a.args.length-1,"lane");a.args.pop(),a.viewLane(n),a.args.push(...a.lanesJoined.lanes[n].args)});
+w("endlane",e=>e.endView());
+w("collect",o=>{for(const c of o.joinedLanes("collect"))o.args.push(...c.args)});
+w("into",o=>{o.need(1,"into");const n=o.argSym(o.args.length-1);o.args.pop();const s=[];for(const t of o.joinedLanes("into"))s.push(...t.args);o.lists[n]=s,o.wrote(n)});
+w("reduce",e=>{const a=text(e.pop("reduce")),s=e.joinedLanes("reduce");if(s.length){e.args.push(...s[0].args);for(let t=s.length-1;t>=1;t--)e.fs.push(e.srcFrame(a)),e.fs.push(e.hostFrame(()=>e.args.push(...s[t].args)))}});
+w("lanewise",s=>{const l=text(s.pop("lanewise")),t=s.lanesJoined,a=s.joinedLanes("lanewise");s.endView();const h=s.args,i=s.state(),n=s.ow;s.fs.push(s.hostFrame(()=>{s.useState(i),s.args=h,s.laneAt=t.laneAt,s.ow=n}));for(let e=a.length-1;e>=0;e--)s.fs.push(s.hostFrame(()=>{const o=s.state();a[e]={args:s.args,st:o,w:s.laneWrites(o,t.fork)}})),s.fs.push(s.srcFrame(l)),s.fs.push(s.hostFrame(()=>{s.useState(a[e].st),s.args=a[e].args.slice(),s.laneAt=e,s.ow=n}));s.args=[]});
+w("try",t=>{const a=text(t.pop("try")),n=text(t.pop("try"));t.args=[];const e=t.hostFrame(()=>{});e.catch={h:a,frames:t.frames.length,lanes:t.laneStack.length,laneAt:t.laneAt},t.fs.push(e),t.runSrc(n)});
+}
+const VOID=new Set(["area","base","br","col","embed","hr","img","input","link","meta","source","track","wbr"]);
+const TAGS=new Set("a abbr address article aside audio b bdi bdo blockquote body br button canvas caption cite code col colgroup data datalist dd del details dfn dialog div dl dt em fieldset figcaption figure footer form h1 h2 h3 h4 h5 h6 header hgroup hr i iframe img input ins kbd label legend li link main map mark menu meta meter nav noscript object ol optgroup option output p picture pre progress q rp rt ruby s samp section select slot small source span strong sub summary sup table tbody td template textarea tfoot th thead time tr track u ul var video wbr".split(" "));
+const EVENTS=new Set("click dblclick input change submit keydown keyup focus blur mouseenter mouseleave mousedown mouseup pointerdown pointerup contextmenu wheel scroll load toggle".split(" "));
+const kebab=e=>e.replace(/[A-Z]/g,a=>"-"+a.toLowerCase());
+function elementSpec(a){const e=/^<?([a-z][a-z0-9]*)((?:[.#][A-Za-z_][\w-]*)*)$/.exec(a);if(!e||!TAGS.has(e[1]))return null;const s=[],n=[];for(const t of e[2].match(/[.#][A-Za-z_][\w-]*/g)||[])(t[0]==="."?s:n).push(kebab(t.slice(1)));return{tag:e[1],classes:s,id:n[n.length-1]||null}}
+const attrWord=t=>/^[a-z][\w-]*=$/.test(t);
+const eventWord=t=>t.length>2&&t.startsWith("on")&&EVENTS.has(t.slice(2));
+const selWord=s=>/^\$[.#a-zA-Z[:*]/.test(s);
+const component=(e,t)=>/^[A-Z]/.test(t)&&e.repl.has(t);
+function isCode(r,n){if(/[{}'⟨⟪⨝]/.test(n))return!0;const t=n.split(/\s+/).filter(Boolean),s=t[t.length-1];if(t.length>1&&s.length>1&&elementSpec(s))return!0;for(const e of t)if((e[0]==="<"||/[.#]/.test(e))&&elementSpec(e)||selWord(e)||attrWord(e)||eventWord(e)||component(r,e)||e==="&&&"||e==="~"||e==="?)"||e==="><"||e==="##"||e.length>1&&e.endsWith(".")&&r.scripts[r.it.sym(e.replace(/\.+$/,""))])return!0;return!1}
+const fresh=()=>({classes:[],attrs:[],events:[],at:null,routes:!1});
+const evalParts=(n,t)=>t.map(a=>a[0]==="T"?a[1]:n.interp(a[1])).join("");
+function attachDom(rt, opts = {}) {const doc=opts.document||document;
+const win=doc.defaultView;
+const mount=opts.mount||doc.body;
+const store=opts.storage===void 0?safeStorage(win):opts.storage;
+const D={mount,parents:[mount],pending:fresh(),regions:[],attrs:[],twoWay:[],events:[],timers:[],pages:new Map,routers:[],kept:new Set,rules:new Set,all:!1,busy:!1,onError:opts.onError||(e=>console.error("s:",e)),budget:opts.budget||5e6};
+rt.dom=D;
+rt.tracking=!0;
+const top=()=>D.parents[D.parents.length-1];
+const sheet=()=>{let e=doc.getElementById("s-sheet");return e||(e=doc.createElement("style"),e.id="s-sheet",doc.head.append(e)),e};
+function flushText(t,e){if(!rt.args.length)return;const n=rt.args.map(text).join(" ");if(rt.args=[],!n)return;const r=!e&&t.childNodes.length?" ":"";t.append(doc.createTextNode(r+n+(e?" ":"")))}
+function interpolated(){const t=rt.lastInterp;if(!t||t.at!==rt.args.length||rt.args[rt.args.length-1]!==t.v)return null;if(rt.lastInterp=null,rt.reads instanceof Reads)for(const r of t.reads)rt.reads.sub(r);return t}
+function runChildren(r,s,t,e,a){if(!a){s&&r.append(doc.createTextNode(s)),e&&e.size&&D.regions.push({el:r,code:t?null:s,parts:t,reads:new Set(e),c:a});return}const o=rt.args,d=rt.reads;if(rt.args=[],rt.reads=new Reads,e)for(const n of e)rt.reads.add(n);D.parents.push(r),rt.fs.push(rt.hostFrame(()=>{flushText(r,!1),D.parents.pop(),rt.args=o;const n=rt.reads;rt.reads=d,n.size&&D.regions.push({el:r,code:t?null:s,parts:t,reads:new Set(n.keys()),c:a})})),rt.runSrc(s)}
+function codeOf(e,n){return isCode(rt,n?n.map(o=>o[0]==="T"?o[1]:" x ").join(""):e)}
+const kids=(u,n,l=null,d=null)=>runChildren(u,n,l,d,codeOf(n,l));
+function apply(s,e){e.classes.length&&s.classList.add(...e.classes);for(const[a,n,t]of e.attrs){if(t&&(a==="value"||a==="checked")&&/^(INPUT|SELECT|TEXTAREA)$/.test(s.tagName)&&t.parts.length===1&&t.parts[0][0]==="V"){twoWay(s,t.parts[0][1]);continue}setAttr(s,a,n),t&&t.reads.size&&D.attrs.push({el:s,name:a,parts:t.parts,reads:new Set(t.reads)})}for(const[a,n]of e.events)listen(s,a,n)}
+function setAttr(e,s,t){s==="class"?e.classList.add(...t.split(/\s+/).filter(Boolean)):s==="style"?e.style.cssText+=";"+t:s==="value"&&"value"in e?(e.value=t,e.setAttribute("value",t)):s==="checked"&&"checked"in e?(e.checked=t!==""&&t!=="0",e.checked&&e.setAttribute("checked","")):e.setAttribute(s,t)}
+function listen(n,t,i){D.events.push({el:n,ev:t,code:i}),n.addEventListener(t,s=>{t==="submit"&&s.preventDefault(),handler(i,s,n)})}
+function element(t){const l=D.pending;D.pending=fresh();let i=null,n=null;VOID.has(t.tag)||(rt.args.length||rt.fail(`${t.tag}: needs its children, a brace (or {} for none)`),n=interpolated(),i=text(rt.args.pop()));const a=l.at?query(l.at):top();l.at||flushText(a,!0);const e=doc.createElement(t.tag);if(t.classes.length&&e.classList.add(...t.classes),t.id&&(e.id=t.id),apply(e,l),a.lastChild&&a.lastChild.nodeType===1&&a.append(doc.createTextNode(" ")),a.append(e),l.routes){D.routers.push(e);const r=currentPage();r!==null&&kids(e,r);return}i!==null&&kids(e,i,n?n.parts:null,n?n.reads:null)}
+function query(e){const t=doc.querySelector(e);return t||rt.fail(`no element matches ${e}`),t}
+rt.hostWord=(s,e,r)=>{if(e[0]==="<"||!r){const t=elementSpec(e);if(t)return element(t),!0}if(attrWord(e)){const t=interpolated(),n=text(rt.pop(e));return D.pending.attrs.push([e.slice(0,-1),n,t]),!0}if(eventWord(e)){const t=text(rt.pop(e));return D.pending.events.push([e.slice(2),t]),!0}if(selWord(e)){const t=text(rt.pop(e));return kids(query(e.slice(1)),t),!0}return!1};
+rt.preWord=e=>{if(!TAGS.has(e))return!1;const r=rt.visible(e);return!r||!r.lib||rt.inLib()?!1:(element(elementSpec(e)),!0)};
+function act(t,r){if(D.busy){rt.runSrc(t);return}D.busy=!0,rt.args=[],D.parents=[mount];const e=rt.writes;rt.writes=new Set;const s=rt.runText(t,D.budget),n=rt.writes;rt.writes=e,D.busy=!1,report(s,r),D.kept.size&&save(),refresh(n)}
+function report(r,e){r==="ran"?D.onError({msg:`${e}: stopped after ${D.budget} ops`,code:rt.siteCode,pc:rt.site[1]}):r&&r.error&&D.onError({msg:r.error,code:rt.siteCode,pc:rt.site[1]})}
+function handler(n,t,e){typeof setEventNames=="function"&&setEventNames(t,e),act(n,"on"+(t?t.type:""))}
+function nameText(e){return rt.mem[e]!==void 0?text(rt.mem[e]):rt.nums[e]!==void 0?text(rt.nums[e]):""}
+function showName(e,c){const t=nameText(c);e.type==="checkbox"?(e.checked=t!==""&&num(t)!==0,e.toggleAttribute("checked",e.checked)):e.value!==t&&(e.value=t,e.setAttribute("value",t))}
+function twoWay(e,t){e.dataset.bind=rt.name(t),D.twoWay.push({el:e,k:t}),showName(e,t),e.addEventListener(e.tagName==="SELECT"||e.type==="checkbox"?"change":"input",()=>{e.type==="checkbox"?(rt.nums[t]=e.checked?1:0,rt.mem[t]=void 0):rt.mem[t]=valOf(e.value),D.kept.size&&save(),refresh(new Set([t]))})}
+const meets=(e,r)=>{for(const t of e)if(r.has(t))return!0;return!1};
+function refresh(n){if(D.all&&(D.all=!1,n="all"),D.busy){n==="all"&&(D.all=!0);return}if(n!=="all"&&(!n||!n.size))return;const i=e=>n==="all"||meets(e.reads,n),l=doc.activeElement,c=l&&l!==doc.body&&(l.id?"#"+l.id:l.dataset&&l.dataset.bind?`[data-bind="${l.dataset.bind}"]`:null),o=l&&"selectionStart"in l?(()=>{try{return[l.selectionStart,l.selectionEnd]}catch{return null}})():null;D.busy=!0;const a=e=>e.el.isConnected;D.regions=D.regions.filter(a);let s=D.regions.filter(i);if(n==="all")for(const e of D.routers)e.isConnected&&s.push({el:e,router:!0});s=s.filter(e=>!s.some(r=>r!==e&&r.el!==e.el&&r.el.contains(e.el)));for(const e of s){if(!e.el.isConnected)continue;const r=t=>t.el!==e.el&&e.el.contains(t.el);if(D.regions=D.regions.filter(t=>t!==e&&!(e.router&&t.el===e.el)&&!r(t)),D.attrs=D.attrs.filter(t=>!r(t)),D.twoWay=D.twoWay.filter(t=>!r(t)),D.events=D.events.filter(t=>!r(t)),D.routers=D.routers.filter(t=>t===e.el||!e.el.contains(t)),e.el.replaceChildren(),rt.args=[],D.parents=[mount],e.router){const t=currentPage();t!==null&&kids(e.el,t)}else if(e.parts){const t=new Set,u=rt.reads;rt.reads=t;const f=evalParts(rt,e.parts);rt.reads=u,runChildren(e.el,f,e.parts,t,e.c)}else runChildren(e.el,e.code,null,null,e.c);report(rt.run(D.budget),"update"),rt.args=[]}if(D.attrs.length&&refreshAttrs(i,a),D.twoWay.length&&refreshInputs(n,a),D.parents=[mount],D.busy=!1,c){const e=doc.querySelector(c);if(e&&e!==doc.activeElement&&(e.focus(),o&&"setSelectionRange"in e))try{e.setSelectionRange(o[0],o[1])}catch{}}D.all&&refresh("all")}
+function refreshAttrs(s,a){D.attrs=D.attrs.filter(a);for(const t of D.attrs){if(!s(t))continue;const e=new Set,n=rt.reads;rt.reads=e;const r=evalParts(rt,t.parts);rt.reads=n,t.reads=e,t.name==="class"||t.name==="style"?t.el.setAttribute(t.name,r):setAttr(t.el,t.name,r)}}
+function refreshInputs(o,t){D.twoWay=D.twoWay.filter(t);for(const e of D.twoWay)(o==="all"||o.has(e.k))&&!(e.el===doc.activeElement&&e.el.type!=="checkbox")&&showName(e.el,e.k)}
+function currentPage(){const e=decodeURIComponent((win.location.hash||"").replace(/^#\/?/,""));if(D.pages.has(e))return D.pages.get(e);const n=D.pages.values().next();return n.done?null:n.value}
+function restore(e){if(!store)return;let t;try{t=JSON.parse(store.getItem("s:"+e)||"null")}catch{t=null}if(!t)return;const r=rt.it.sym(e);return"mem"in t&&(rt.mem[r]=t.mem),"num"in t&&(rt.nums[r]=t.num),"list"in t&&(rt.lists[r]=t.list),r}
+function save(){if(store)for(const n of D.kept){const t=rt.it.sym(n),e={};rt.mem[t]!==void 0&&(e.mem=typeof rt.mem[t]=="object"?rt.mem[t].w:rt.mem[t]),rt.nums[t]!==void 0&&(e.num=rt.nums[t]),rt.lists[t]!==void 0&&(e.list=rt.lists[t].map(m=>typeof m=="object"?m.w:m));try{store.setItem("s:"+n,JSON.stringify(e))}catch{}}}
+const word=(t,n)=>rt.native(t,n);
+word("refresh",()=>{D.all=!0,D.busy||refresh("all")});
+word("at",t=>{D.pending.at=text(t.pop("at"))});
+word("routes",()=>{D.pending.routes=!0});
+word("page",e=>{const p=text(e.pop("page")),t=text(e.pop("page"));D.pages.set(p,t)});
+word("css",s=>{const e=text(s.pop("css")),t=text(s.pop("css"));D.rules.has(e)||(D.rules.add(e),sheet().append(doc.createTextNode(`
+${e} {${t}}`)))});
+word("sheet",e=>{sheet().append(doc.createTextNode(`
+`+text(e.pop("sheet"))))});
+word("html",e=>{const n=text(e.pop("html")),t=top();flushText(t,!0),t.insertAdjacentHTML("beforeend",n)});
+word("each",t=>{const i=text(t.pop("each")),m=text(t.pop("each")),s=t.it.sym(m);t.read(s);const n=(t.lists[s]||[]).slice(),o=t.it.sym("it"),c=t.it.sym("i");for(let e=n.length-1;e>=0;e--)t.runSrc(i),t.fs.push(t.hostFrame(()=>{t.mem[o]=n[e],t.nums[c]=e,t.mem[c]=void 0}))});
+word("keep",p=>{const e=text(p.pop("keep"));D.kept.add(e),restore(e)});
+const timer=t=>e=>{const o=Math.max(16,num(e.pop(t?"every":"after"))),m=text(e.pop(t?"every":"after"));startTimer(m,o,t)};
+function startTimer(n,t,i){const e=()=>act(n,i?"every":"after");D.timers.push({id:i?win.setInterval(e,t):win.setTimeout(e,t),code:n,ms:t,repeat:i})}
+word("every",timer(!0));
+word("after",timer(!1));
+word("title",t=>{doc.title=text(t.pop("title"))});
+word("now",o=>{o.args.push(Date.now())});
+word("time",e=>{e.args.push(new Date().toLocaleTimeString())});
+word("date",a=>{a.args.push(new Date().toLocaleDateString())});
+const api={};
+api.resume=function(t){const s=e=>doc.querySelector(`[data-s="${e}"]`);for(const e of["events","regions","attrs","twoWay","pages","rules","kept","timers","routers"])t[e].length&&RESUME[e](t[e],s)};
+const RESUME={};
+RESUME.events=function(e,n){for(const[o,t,c]of e)listen(n(o),t,c)};
+RESUME.regions=function(e,o){for(const[s,n,r,c,i]of e)D.regions.push({el:o(s),code:n,parts:r,reads:new Set(c),c:!!i})};
+return api
+}
+function safeStorage(e){try{const t=e.localStorage;return t.getItem("x"),t}catch{return null}}
+return{Rt,attachDom,classify,parse}};
+
+(()=>{
+const {Rt,attachDom,classify,parse}=sCore()
+const K=["A 'a' B 'b' C 'c' D 'd' E 'e' F 'f' G 'g' H 'h' I 'i' J 'j' K 'k' L 'l' M 'm' N 'n' O 'o' P 'p' Q 'q' R 'r' S 's' T 't' U 'u' V 'v' W 'w' X 'x' Y 'y' Z 'z'","a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z","a 'A' b 'B' c 'C' d 'D' e 'E' f 'F' g 'G' h 'H' i 'I' j 'J' k 'K' l 'L' m 'M' n 'N' o 'O' p 'P' q 'Q' r 'R' s 'S' t 'T' u 'U' v 'V' w 'W' x 'X' y 'Y' z 'Z'","A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z","\n","}","0 \\( {} _y` _fp {~_FI~} _x \\[l] _fa {~_FI~} _y \\[l] _FI; \\) {~_x~} {~_y~} _format..","",[["V",136]],[["V",53]],[["V",109]],"0 \\( _fp _N \\#l {~_FI~} {~_N~} \\<< \\) _format1..?",[["V",90]],"0 \\( {_st~_lv~} \\-l \\) {~$~} _unst..",[["T","_st"],["V",89]],[["V",5]],"0 \\( {_st~_lv~} _N \\#l {~_N~} 0 \\>> \\) _unst1..?","_y@ 0 \\( {~_y~} {_st~_lv~} \\l \\) _ins..","_y@ 0 \\( {~_y~} {~_sx~} \\>> \\) {~_y~} _ins2..?",[["V",108]],"\\## _d@ 0 \\( {~_d~} 0 \\>> \\) _ins1..?",[["V",45]],"0 \\( {_dl~_lv~} \\-l {~$~} _sx` \\) _ins.. {~_sx~} _unst.. _sort..",[["T","_dl"],["V",89]],"0 \\( {_dl~_lv~} _N \\#l {~_N~} 0 \\>> \\) _sort1..?","0 \\( _oq -1 _c \\[l] {_dl~_lv~} \\-l \\) {~$~} {~_c~} \\~ _fold..",[["V",35]],"0 \\( {_dl~_lv~} _N \\#l {~_N~} 0 \\>> \\) _fold1..?","0 \\( _fq -1 _c \\[l] {_dl~_lv~} \\-l \\) {~$~} {~$~} 1 \\( {~_c~} \\~ \\// \\) drop! _filter..","_a@","0 \\( {_dl~_lv~} _N \\#l {~_N~} 0 \\>> \\) _filter1..?","0 \\( _mq -1 _c \\[l] {_dl~_lv~} \\-l \\) {~$~} 1 \\( {~_c~} \\~ \\) _map..","0 \\( {_dl~_lv~} _N \\#l {~_N~} 0 \\>> \\) _map1..?","0 \\( _sn -1 _c \\[l] _si -1 _i \\[l] {~_c~} {~_i~} _x \\[l] {~_i~} 1 _I \\+ {~_I~} _si -1 \\l= \\) {~_x~} _spill..",[["V",94]],[["V",95]],"0 \\( _sn -1 _c \\[l] _si -1 _i \\[l] {~_c~} _N \\#l {~_i~} {~_N~} \\<< \\) _spill1..?","0 \\( {_dl~_lv~} \\-l _gk -1 _c \\[l] {~$~} {~_c~} \\l \\) _pour..","0 \\( {_dl~_lv~} _N \\#l {~_N~} 0 \\>> \\) _pour1..?","_v@ 0 \\( {~_v~} {_dl~_lv~} \\l \\) _drain..",[["V",88]],"\\## _d@ 0 \\( {~_d~} 0 \\>> \\) _drain1..?","0 \\( _uq -1 _c \\[l] {~_c~} \\) \\~ 0 \\( _uc -1 _c \\[l] {~_c~} \\) test _untilgo..!","_t@ \\## _d@ 0 \\( {~_d~} 0 \\>> \\) dup? 1 0 drop? nip! \\( {~_t~} \\~ \\// \\)",[["V",44]],"_a@ _b@ {~_a~}",[["V",33]],"_a@ {~_a~} {~_a~}","0 \\( _wb -1 _c \\[l] {~_c~} \\) \\~ _while..","0 \\( _wc -1 _c \\[l] {~_c~} \\) test _while1..?","0 \\( {~_k~} 1 _K \\- {~_K~} _tn -1 \\l= _tq -1 _c \\[l] {~_c~} \\) \\~ _times..",[["V",60]],[["V",61]],"0 \\( _tn -1 _k \\[l] {~_k~} 0 \\>> \\) _times1..?","x~ 2 pow x@","2 \\( _R \\^ _R~ \\)"]
+const L=[]
+const C=new Map([[K[0],{fn:(R,d)=>{
+R.wordRc("A",214,null);R.st(d)
+R.args.push(K[1])
+R.wordRc("B",215,null);R.st(d)
+R.args.push(K[2])
+R.wordRc("C",216,null);R.st(d)
+R.args.push(K[3])
+R.wordRc("D",217,null);R.st(d)
+R.args.push(K[4])
+R.wordRc("E",218,null);R.st(d)
+R.args.push(K[5])
+R.wordRc("F",219,null);R.st(d)
+R.args.push(K[6])
+R.wordRc("G",220,null);R.st(d)
+R.args.push(K[7])
+R.wordRc("H",221,null);R.st(d)
+R.args.push(K[8])
+R.wordRc("I",222,null);R.st(d)
+R.args.push(K[9])
+R.wordRc("J",223,null);R.st(d)
+R.args.push(K[10])
+R.wordRc("K",224,null);R.st(d)
+R.args.push(K[11])
+R.wordRc("L",225,null);R.st(d)
+R.args.push(K[12])
+R.wordRc("M",226,null);R.st(d)
+R.args.push(K[13])
+R.wordRc("N",227,null);R.st(d)
+R.args.push(K[14])
+R.wordRc("O",228,null);R.st(d)
+R.args.push(K[15])
+R.wordRc("P",229,null);R.st(d)
+R.args.push(K[16])
+R.wordRc("Q",230,null);R.st(d)
+R.args.push(K[17])
+R.wordRc("R",231,null);R.st(d)
+R.args.push(K[18])
+R.wordRc("S",232,null);R.st(d)
+R.args.push(K[19])
+R.wordRc("T",233,null);R.st(d)
+R.args.push(K[20])
+R.wordRc("U",234,null);R.st(d)
+R.args.push(K[21])
+R.wordRc("V",235,null);R.st(d)
+R.args.push(K[22])
+R.wordRc("W",236,null);R.st(d)
+R.args.push(K[23])
+R.wordRc("X",237,null);R.st(d)
+R.args.push(K[24])
+R.wordRc("Y",238,null);R.st(d)
+R.args.push(K[25])
+R.wordRc("Z",239,null);R.st(d)
+R.args.push(K[26])
+},src:K[0],unit:-1}],
+[K[26],{fn:(R,d)=>{
+R.wordRc("z",240,null);R.st(d)
+},src:K[26],unit:-1}],
+[K[25],{fn:(R,d)=>{
+R.wordRc("y",241,null);R.st(d)
+},src:K[25],unit:-1}],
+[K[24],{fn:(R,d)=>{
+R.wordRc("x",16,null);R.st(d)
+},src:K[24],unit:-1}],
+[K[23],{fn:(R,d)=>{
+if(R.cmdSite("w"))return 1;R.st(d)
+},src:K[23],unit:-1}],
+[K[22],{fn:(R,d)=>{
+R.wordRc("v",242,null);R.st(d)
+},src:K[22],unit:-1}],
+[K[21],{fn:(R,d)=>{
+R.wordRc("u",243,null);R.st(d)
+},src:K[21],unit:-1}],
+[K[20],{fn:(R,d)=>{
+if(R.cmdSite("t"))return 1;R.st(d)
+},src:K[20],unit:-1}],
+[K[19],{fn:(R,d)=>{
+R.wordRc("s",244,null);R.st(d)
+},src:K[19],unit:-1}],
+[K[18],{fn:(R,d)=>{
+if(R.cmdSite("r"))return 1;R.st(d)
+},src:K[18],unit:-1}],
+[K[17],{fn:(R,d)=>{
+R.wordRc("q",245,null);R.st(d)
+},src:K[17],unit:-1}],
+[K[16],{fn:(R,d)=>{
+R.wordRc("p",246,null);R.st(d)
+},src:K[16],unit:-1}],
+[K[15],{fn:(R,d)=>{
+R.wordRc("o",247,null);R.st(d)
+},src:K[15],unit:-1}],
+[K[14],{fn:(R,d)=>{
+if(R.cmdSite("n"))return 1;R.st(d)
+},src:K[14],unit:-1}],
+[K[13],{fn:(R,d)=>{
+R.wordRc("m",248,null);R.st(d)
+},src:K[13],unit:-1}],
+[K[12],{fn:(R,d)=>{
+if(R.cmdSite("l"))return 1;R.st(d)
+},src:K[12],unit:-1}],
+[K[11],{fn:(R,d)=>{
+R.wordRc("k",249,null);R.st(d)
+},src:K[11],unit:-1}],
+[K[10],{fn:(R,d)=>{
+R.wordRc("j",250,null);R.st(d)
+},src:K[10],unit:-1}],
+[K[9],{fn:(R,d)=>{
+R.wordRc("i",251,null);R.st(d)
+},src:K[9],unit:-1}],
+[K[8],{fn:(R,d)=>{
+R.wordRc("h",252,null);R.st(d)
+},src:K[8],unit:-1}],
+[K[7],{fn:(R,d)=>{
+R.wordRc("g",253,null);R.st(d)
+},src:K[7],unit:-1}],
+[K[6],{fn:(R,d)=>{
+if(R.cmdSite("f"))return 1;R.st(d)
+},src:K[6],unit:-1}],
+[K[5],{fn:(R,d)=>{
+R.wordRc("e",254,null);R.st(d)
+},src:K[5],unit:-1}],
+[K[4],{fn:(R,d)=>{
+R.wordRc("d",255,null);R.st(d)
+},src:K[4],unit:-1}],
+[K[3],{fn:(R,d)=>{
+R.wordRc("c",256,null);R.st(d)
+},src:K[3],unit:-1}],
+[K[2],{fn:(R,d)=>{
+R.wordRc("b",257,null);R.st(d)
+},src:K[2],unit:-1}],
+[K[1],{fn:(R,d)=>{
+R.wordRc("a",258,null);R.st(d)
+},src:K[1],unit:-1}],
+[K[27],{fn:(R,d)=>{
+R.wordRc("a",258,null);R.st(d)
+R.args.push(K[28])
+R.wordRc("b",257,null);R.st(d)
+R.args.push(K[29])
+R.wordRc("c",256,null);R.st(d)
+R.args.push(K[30])
+R.wordRc("d",255,null);R.st(d)
+R.args.push(K[31])
+R.wordRc("e",254,null);R.st(d)
+R.args.push(K[32])
+if(R.cmdSite("f"))return 1;R.st(d)
+R.args.push(K[33])
+R.wordRc("g",253,null);R.st(d)
+R.args.push(K[34])
+R.wordRc("h",252,null);R.st(d)
+R.args.push(K[35])
+R.wordRc("i",251,null);R.st(d)
+R.args.push(K[36])
+R.wordRc("j",250,null);R.st(d)
+R.args.push(K[37])
+R.wordRc("k",249,null);R.st(d)
+R.args.push(K[38])
+if(R.cmdSite("l"))return 1;R.st(d)
+R.args.push(K[39])
+R.wordRc("m",248,null);R.st(d)
+R.args.push(K[40])
+if(R.cmdSite("n"))return 1;R.st(d)
+R.args.push(K[41])
+R.wordRc("o",247,null);R.st(d)
+R.args.push(K[42])
+R.wordRc("p",246,null);R.st(d)
+R.args.push(K[43])
+R.wordRc("q",245,null);R.st(d)
+R.args.push(K[44])
+if(R.cmdSite("r"))return 1;R.st(d)
+R.args.push(K[45])
+R.wordRc("s",244,null);R.st(d)
+R.args.push(K[46])
+if(R.cmdSite("t"))return 1;R.st(d)
+R.args.push(K[47])
+R.wordRc("u",243,null);R.st(d)
+R.args.push(K[48])
+R.wordRc("v",242,null);R.st(d)
+R.args.push(K[49])
+if(R.cmdSite("w"))return 1;R.st(d)
+R.args.push(K[50])
+R.wordRc("x",16,null);R.st(d)
+R.args.push(K[51])
+R.wordRc("y",241,null);R.st(d)
+R.args.push(K[52])
+R.wordRc("z",240,null);R.st(d)
+R.args.push(K[53])
+},src:K[27],unit:-1}],
+[K[53],{fn:(R,d)=>{
+R.wordRc("Z",239,null);R.st(d)
+},src:K[53],unit:-1}],
+[K[52],{fn:(R,d)=>{
+R.wordRc("Y",238,null);R.st(d)
+},src:K[52],unit:-1}],
+[K[51],{fn:(R,d)=>{
+R.wordRc("X",237,null);R.st(d)
+},src:K[51],unit:-1}],
+[K[50],{fn:(R,d)=>{
+R.wordRc("W",236,null);R.st(d)
+},src:K[50],unit:-1}],
+[K[49],{fn:(R,d)=>{
+R.wordRc("V",235,null);R.st(d)
+},src:K[49],unit:-1}],
+[K[48],{fn:(R,d)=>{
+R.wordRc("U",234,null);R.st(d)
+},src:K[48],unit:-1}],
+[K[47],{fn:(R,d)=>{
+R.wordRc("T",233,null);R.st(d)
+},src:K[47],unit:-1}],
+[K[46],{fn:(R,d)=>{
+R.wordRc("S",232,null);R.st(d)
+},src:K[46],unit:-1}],
+[K[45],{fn:(R,d)=>{
+R.wordRc("R",231,null);R.st(d)
+},src:K[45],unit:-1}],
+[K[44],{fn:(R,d)=>{
+R.wordRc("Q",230,null);R.st(d)
+},src:K[44],unit:-1}],
+[K[43],{fn:(R,d)=>{
+R.wordRc("P",229,null);R.st(d)
+},src:K[43],unit:-1}],
+[K[42],{fn:(R,d)=>{
+R.wordRc("O",228,null);R.st(d)
+},src:K[42],unit:-1}],
+[K[41],{fn:(R,d)=>{
+R.wordRc("N",227,null);R.st(d)
+},src:K[41],unit:-1}],
+[K[40],{fn:(R,d)=>{
+R.wordRc("M",226,null);R.st(d)
+},src:K[40],unit:-1}],
+[K[39],{fn:(R,d)=>{
+R.wordRc("L",225,null);R.st(d)
+},src:K[39],unit:-1}],
+[K[38],{fn:(R,d)=>{
+R.wordRc("K",224,null);R.st(d)
+},src:K[38],unit:-1}],
+[K[37],{fn:(R,d)=>{
+R.wordRc("J",223,null);R.st(d)
+},src:K[37],unit:-1}],
+[K[36],{fn:(R,d)=>{
+R.wordRc("I",222,null);R.st(d)
+},src:K[36],unit:-1}],
+[K[35],{fn:(R,d)=>{
+R.wordRc("H",221,null);R.st(d)
+},src:K[35],unit:-1}],
+[K[34],{fn:(R,d)=>{
+R.wordRc("G",220,null);R.st(d)
+},src:K[34],unit:-1}],
+[K[33],{fn:(R,d)=>{
+R.wordRc("F",219,null);R.st(d)
+},src:K[33],unit:-1}],
+[K[32],{fn:(R,d)=>{
+R.wordRc("E",218,null);R.st(d)
+},src:K[32],unit:-1}],
+[K[31],{fn:(R,d)=>{
+R.wordRc("D",217,null);R.st(d)
+},src:K[31],unit:-1}],
+[K[30],{fn:(R,d)=>{
+R.wordRc("C",216,null);R.st(d)
+},src:K[30],unit:-1}],
+[K[29],{fn:(R,d)=>{
+R.wordRc("B",215,null);R.st(d)
+},src:K[29],unit:-1}],
+[K[28],{fn:(R,d)=>{
+R.wordRc("A",214,null);R.st(d)
+},src:K[28],unit:-1}],
+[K[54],{fn:(R,d)=>{
+
+},src:K[54],unit:-1}],
+[K[55],{fn:(R,d)=>{
+R.wordRc("}",259,null);R.st(d)
+},src:K[55],unit:-1}],
+[K[56],{fn:(R,d)=>{
+R.wordRc("0",25,0);R.st(d)
+if(R.cmd("("))return 1;R.st(d)
+R.args.push(K[57])
+R.setMem(109)
+R.wordRc("_fp",135,null);R.st(d)
+R.interpOp(K[58])
+R.wordRc("_x",53,null);R.st(d)
+if(R.cmd("[l]"))return 1;R.st(d)
+R.wordRc("_fa",137,null);R.st(d)
+R.interpOp(K[58])
+R.wordRc("_y",109,null);R.st(d)
+if(R.cmd("[l]"))return 1;R.st(d)
+R.incBy(136,1)
+if(R.cmd(")"))return 1;R.st(d)
+R.interpOp(K[59])
+R.interpOp(K[60])
+return{tail:R.l(116)}
+},src:K[56],unit:-1}],
+[K[57],{fn:(R,d)=>{
+
+},src:K[57],unit:-1}],
+[K[61],{fn:(R,d)=>{
+R.wordRc("0",25,0);R.st(d)
+if(R.cmd("("))return 1;R.st(d)
+R.wordRc("_fp",135,null);R.st(d)
+R.wordRc("_N",90,null);R.st(d)
+if(R.cmd("#l"))return 1;R.st(d)
+R.interpOp(K[58])
+R.interpOp(K[62])
+if(R.cmd("<<"))return 1;R.st(d)
+if(R.cmd(")"))return 1;R.st(d)
+if(R.ow===true){return{tail:R.l(117)}}
+},src:K[61],unit:-1}],
+[K[63],{fn:(R,d)=>{
+R.wordRc("0",25,0);R.st(d)
+if(R.cmd("("))return 1;R.st(d)
+R.interpOp(K[64])
+if(R.cmd("-l"))return 1;R.st(d)
+if(R.cmd(")"))return 1;R.st(d)
+R.interpOp(K[65])
+return{tail:R.l(86)}
+},src:K[63],unit:-1}],
+[K[66],{fn:(R,d)=>{
+R.wordRc("0",25,0);R.st(d)
+if(R.cmd("("))return 1;R.st(d)
+R.interpOp(K[64])
+R.wordRc("_N",90,null);R.st(d)
+if(R.cmd("#l"))return 1;R.st(d)
+R.interpOp(K[62])
+R.wordRc("0",25,0);R.st(d)
+if(R.cmd(">>"))return 1;R.st(d)
+if(R.cmd(")"))return 1;R.st(d)
+if(R.ow===true){return{tail:R.l(87)}}
+},src:K[66],unit:-1}],
+[K[67],{fn:(R,d)=>{
+R.popTo(109)
+R.wordRc("0",25,0);R.st(d)
+if(R.cmd("("))return 1;R.st(d)
+R.interpOp(K[60])
+R.interpOp(K[64])
+if(R.cmd("l"))return 1;R.st(d)
+if(R.cmd(")"))return 1;R.st(d)
+return{tail:R.l(83)}
+},src:K[67],unit:-1}],
+[K[68],{fn:(R,d)=>{
+R.popTo(109)
+R.wordRc("0",25,0);R.st(d)
+if(R.cmd("("))return 1;R.st(d)
+R.interpOp(K[60])
+R.interpOp(K[69])
+if(R.cmd(">>"))return 1;R.st(d)
+if(R.cmd(")"))return 1;R.st(d)
+R.interpOp(K[60])
+if(R.ow===true){return{tail:R.l(85)}}
+},src:K[68],unit:-1}],
+[K[70],{fn:(R,d)=>{
+if(R.cmd("##"))return 1;R.st(d)
+R.popTo(45)
+R.wordRc("0",25,0);R.st(d)
+if(R.cmd("("))return 1;R.st(d)
+R.interpOp(K[71])
+R.wordRc("0",25,0);R.st(d)
+if(R.cmd(">>"))return 1;R.st(d)
+if(R.cmd(")"))return 1;R.st(d)
+if(R.ow===true){return{tail:R.l(84)}}
+},src:K[70],unit:-1}],
+[K[72],{fn:(R,d)=>{
+R.wordRc("0",25,0);R.st(d)
+if(R.cmd("("))return 1;R.st(d)
+R.interpOp(K[73])
+if(R.cmd("-l"))return 1;R.st(d)
+R.interpOp(K[65])
+R.setMem(108)
+if(R.cmd(")"))return 1;R.st(d)
+R.call(R.l(83));R.st(d)
+R.interpOp(K[69])
+R.call(R.l(86));R.st(d)
+return{tail:R.l(81)}
+},src:K[72],unit:-1}],
+[K[74],{fn:(R,d)=>{
+R.wordRc("0",25,0);R.st(d)
+if(R.cmd("("))return 1;R.st(d)
+R.interpOp(K[73])
+R.wordRc("_N",90,null);R.st(d)
+if(R.cmd("#l"))return 1;R.st(d)
+R.interpOp(K[62])
+R.wordRc("0",25,0);R.st(d)
+if(R.cmd(">>"))return 1;R.st(d)
+if(R.cmd(")"))return 1;R.st(d)
+if(R.ow===true){return{tail:R.l(82)}}
+},src:K[74],unit:-1}],
+[K[75],{fn:(R,d)=>{
+R.wordRc("0",25,0);R.st(d)
+if(R.cmd("("))return 1;R.st(d)
+R.wordRc("_oq",101,null);R.st(d)
+R.wordRc("-1",38,-1);R.st(d)
+R.wordRc("_c",35,null);R.st(d)
+if(R.cmd("[l]"))return 1;R.st(d)
+R.interpOp(K[73])
+if(R.cmd("-l"))return 1;R.st(d)
+if(R.cmd(")"))return 1;R.st(d)
+R.interpOp(K[65])
+R.interpOp(K[76])
+if(R.cmd("~"))return 1;R.st(d)
+return{tail:R.l(79)}
+},src:K[75],unit:-1}],
+[K[77],{fn:(R,d)=>{
+R.wordRc("0",25,0);R.st(d)
+if(R.cmd("("))return 1;R.st(d)
+R.interpOp(K[73])
+R.wordRc("_N",90,null);R.st(d)
+if(R.cmd("#l"))return 1;R.st(d)
+R.interpOp(K[62])
+R.wordRc("0",25,0);R.st(d)
+if(R.cmd(">>"))return 1;R.st(d)
+if(R.cmd(")"))return 1;R.st(d)
+if(R.ow===true){return{tail:R.l(80)}}
+},src:K[77],unit:-1}],
+[K[78],{fn:(R,d)=>{
+R.wordRc("0",25,0);R.st(d)
+if(R.cmd("("))return 1;R.st(d)
+R.wordRc("_fq",100,null);R.st(d)
+R.wordRc("-1",38,-1);R.st(d)
+R.wordRc("_c",35,null);R.st(d)
+if(R.cmd("[l]"))return 1;R.st(d)
+R.interpOp(K[73])
+if(R.cmd("-l"))return 1;R.st(d)
+if(R.cmd(")"))return 1;R.st(d)
+R.interpOp(K[65])
+R.interpOp(K[65])
+R.wordRc("1",27,1);R.st(d)
+if(R.cmd("("))return 1;R.st(d)
+R.interpOp(K[76])
+if(R.cmd("~"))return 1;R.st(d)
+if(R.cmd("//"))return 1;R.st(d)
+if(R.cmd(")"))return 1;R.st(d)
+if(R.ow===false){R.wordRc("drop",40,null);R.st(d)}
+return{tail:R.l(77)}
+},src:K[78],unit:-1}],
+[K[79],{fn:(R,d)=>{
+R.popTo(33)
+},src:K[79],unit:-1}],
+[K[80],{fn:(R,d)=>{
+R.wordRc("0",25,0);R.st(d)
+if(R.cmd("("))return 1;R.st(d)
+R.interpOp(K[73])
+R.wordRc("_N",90,null);R.st(d)
+if(R.cmd("#l"))return 1;R.st(d)
+R.interpOp(K[62])
+R.wordRc("0",25,0);R.st(d)
+if(R.cmd(">>"))return 1;R.st(d)
+if(R.cmd(")"))return 1;R.st(d)
+if(R.ow===true){return{tail:R.l(78)}}
+},src:K[80],unit:-1}],
+[K[81],{fn:(R,d)=>{
+R.wordRc("0",25,0);R.st(d)
+if(R.cmd("("))return 1;R.st(d)
+R.wordRc("_mq",99,null);R.st(d)
+R.wordRc("-1",38,-1);R.st(d)
+R.wordRc("_c",35,null);R.st(d)
+if(R.cmd("[l]"))return 1;R.st(d)
+R.interpOp(K[73])
+if(R.cmd("-l"))return 1;R.st(d)
+if(R.cmd(")"))return 1;R.st(d)
+R.interpOp(K[65])
+R.wordRc("1",27,1);R.st(d)
+if(R.cmd("("))return 1;R.st(d)
+R.interpOp(K[76])
+if(R.cmd("~"))return 1;R.st(d)
+if(R.cmd(")"))return 1;R.st(d)
+return{tail:R.l(75)}
+},src:K[81],unit:-1}],
+[K[82],{fn:(R,d)=>{
+R.wordRc("0",25,0);R.st(d)
+if(R.cmd("("))return 1;R.st(d)
+R.interpOp(K[73])
+R.wordRc("_N",90,null);R.st(d)
+if(R.cmd("#l"))return 1;R.st(d)
+R.interpOp(K[62])
+R.wordRc("0",25,0);R.st(d)
+if(R.cmd(">>"))return 1;R.st(d)
+if(R.cmd(")"))return 1;R.st(d)
+if(R.ow===true){return{tail:R.l(76)}}
+},src:K[82],unit:-1}],
+[K[83],{fn:(R,d)=>{
+R.wordRc("0",25,0);R.st(d)
+if(R.cmd("("))return 1;R.st(d)
+R.wordRc("_sn",92,null);R.st(d)
+R.wordRc("-1",38,-1);R.st(d)
+R.wordRc("_c",35,null);R.st(d)
+if(R.cmd("[l]"))return 1;R.st(d)
+R.wordRc("_si",93,null);R.st(d)
+R.wordRc("-1",38,-1);R.st(d)
+R.wordRc("_i",94,null);R.st(d)
+if(R.cmd("[l]"))return 1;R.st(d)
+R.interpOp(K[76])
+R.interpOp(K[84])
+R.wordRc("_x",53,null);R.st(d)
+if(R.cmd("[l]"))return 1;R.st(d)
+R.interpOp(K[84])
+R.wordRc("1",27,1);R.st(d)
+R.wordRc("_I",95,null);R.st(d)
+if(R.cmd("+"))return 1;R.st(d)
+R.interpOp(K[85])
+R.wordRc("_si",93,null);R.st(d)
+R.wordRc("-1",38,-1);R.st(d)
+if(R.cmd("l="))return 1;R.st(d)
+if(R.cmd(")"))return 1;R.st(d)
+R.interpOp(K[59])
+return{tail:R.l(73)}
+},src:K[83],unit:-1}],
+[K[86],{fn:(R,d)=>{
+R.wordRc("0",25,0);R.st(d)
+if(R.cmd("("))return 1;R.st(d)
+R.wordRc("_sn",92,null);R.st(d)
+R.wordRc("-1",38,-1);R.st(d)
+R.wordRc("_c",35,null);R.st(d)
+if(R.cmd("[l]"))return 1;R.st(d)
+R.wordRc("_si",93,null);R.st(d)
+R.wordRc("-1",38,-1);R.st(d)
+R.wordRc("_i",94,null);R.st(d)
+if(R.cmd("[l]"))return 1;R.st(d)
+R.interpOp(K[76])
+R.wordRc("_N",90,null);R.st(d)
+if(R.cmd("#l"))return 1;R.st(d)
+R.interpOp(K[84])
+R.interpOp(K[62])
+if(R.cmd("<<"))return 1;R.st(d)
+if(R.cmd(")"))return 1;R.st(d)
+if(R.ow===true){return{tail:R.l(74)}}
+},src:K[86],unit:-1}],
+[K[87],{fn:(R,d)=>{
+R.wordRc("0",25,0);R.st(d)
+if(R.cmd("("))return 1;R.st(d)
+R.interpOp(K[73])
+if(R.cmd("-l"))return 1;R.st(d)
+R.wordRc("_gk",91,null);R.st(d)
+R.wordRc("-1",38,-1);R.st(d)
+R.wordRc("_c",35,null);R.st(d)
+if(R.cmd("[l]"))return 1;R.st(d)
+R.interpOp(K[65])
+R.interpOp(K[76])
+if(R.cmd("l"))return 1;R.st(d)
+if(R.cmd(")"))return 1;R.st(d)
+return{tail:R.l(71)}
+},src:K[87],unit:-1}],
+[K[88],{fn:(R,d)=>{
+R.wordRc("0",25,0);R.st(d)
+if(R.cmd("("))return 1;R.st(d)
+R.interpOp(K[73])
+R.wordRc("_N",90,null);R.st(d)
+if(R.cmd("#l"))return 1;R.st(d)
+R.interpOp(K[62])
+R.wordRc("0",25,0);R.st(d)
+if(R.cmd(">>"))return 1;R.st(d)
+if(R.cmd(")"))return 1;R.st(d)
+if(R.ow===true){return{tail:R.l(72)}}
+},src:K[88],unit:-1}],
+[K[89],{fn:(R,d)=>{
+R.popTo(88)
+R.wordRc("0",25,0);R.st(d)
+if(R.cmd("("))return 1;R.st(d)
+R.interpOp(K[90])
+R.interpOp(K[73])
+if(R.cmd("l"))return 1;R.st(d)
+if(R.cmd(")"))return 1;R.st(d)
+return{tail:R.l(69)}
+},src:K[89],unit:-1}],
+[K[91],{fn:(R,d)=>{
+if(R.cmd("##"))return 1;R.st(d)
+R.popTo(45)
+R.wordRc("0",25,0);R.st(d)
+if(R.cmd("("))return 1;R.st(d)
+R.interpOp(K[71])
+R.wordRc("0",25,0);R.st(d)
+if(R.cmd(">>"))return 1;R.st(d)
+if(R.cmd(")"))return 1;R.st(d)
+if(R.ow===true){return{tail:R.l(70)}}
+},src:K[91],unit:-1}],
+[K[92],{fn:(R,d)=>{
+R.wordRc("0",25,0);R.st(d)
+if(R.cmd("("))return 1;R.st(d)
+R.wordRc("_uq",66,null);R.st(d)
+R.wordRc("-1",38,-1);R.st(d)
+R.wordRc("_c",35,null);R.st(d)
+if(R.cmd("[l]"))return 1;R.st(d)
+R.interpOp(K[76])
+if(R.cmd(")"))return 1;R.st(d)
+if(R.cmd("~"))return 1;R.st(d)
+R.wordRc("0",25,0);R.st(d)
+if(R.cmd("("))return 1;R.st(d)
+R.wordRc("_uc",67,null);R.st(d)
+R.wordRc("-1",38,-1);R.st(d)
+R.wordRc("_c",35,null);R.st(d)
+if(R.cmd("[l]"))return 1;R.st(d)
+R.interpOp(K[76])
+if(R.cmd(")"))return 1;R.st(d)
+R.wordRc("test",49,null);R.st(d)
+if(R.ow===false){return{tail:R.l(32)}}
+},src:K[92],unit:-1}],
+[K[93],{fn:(R,d)=>{
+R.popTo(44)
+if(R.cmd("##"))return 1;R.st(d)
+R.popTo(45)
+R.wordRc("0",25,0);R.st(d)
+if(R.cmd("("))return 1;R.st(d)
+R.interpOp(K[71])
+R.wordRc("0",25,0);R.st(d)
+if(R.cmd(">>"))return 1;R.st(d)
+if(R.cmd(")"))return 1;R.st(d)
+if(R.ow===true){R.wordRc("dup",46,null);R.st(d)}
+R.wordRc("1",27,1);R.st(d)
+R.wordRc("0",25,0);R.st(d)
+if(R.ow===true){R.wordRc("drop",40,null);R.st(d)}
+if(R.ow===false){R.wordRc("nip",41,null);R.st(d)}
+if(R.cmd("("))return 1;R.st(d)
+R.interpOp(K[94])
+if(R.cmd("~"))return 1;R.st(d)
+if(R.cmd("//"))return 1;R.st(d)
+if(R.cmd(")"))return 1;R.st(d)
+},src:K[93],unit:-1}],
+[K[95],{fn:(R,d)=>{
+R.popTo(33)
+R.popTo(34)
+R.interpOp(K[96])
+},src:K[95],unit:-1}],
+[K[97],{fn:(R,d)=>{
+R.popTo(33)
+R.interpOp(K[96])
+R.interpOp(K[96])
+},src:K[97],unit:-1}],
+[K[98],{fn:(R,d)=>{
+R.wordRc("0",25,0);R.st(d)
+if(R.cmd("("))return 1;R.st(d)
+R.wordRc("_wb",65,null);R.st(d)
+R.wordRc("-1",38,-1);R.st(d)
+R.wordRc("_c",35,null);R.st(d)
+if(R.cmd("[l]"))return 1;R.st(d)
+R.interpOp(K[76])
+if(R.cmd(")"))return 1;R.st(d)
+if(R.cmd("~"))return 1;R.st(d)
+return{tail:R.l(30)}
+},src:K[98],unit:-1}],
+[K[99],{fn:(R,d)=>{
+R.wordRc("0",25,0);R.st(d)
+if(R.cmd("("))return 1;R.st(d)
+R.wordRc("_wc",64,null);R.st(d)
+R.wordRc("-1",38,-1);R.st(d)
+R.wordRc("_c",35,null);R.st(d)
+if(R.cmd("[l]"))return 1;R.st(d)
+R.interpOp(K[76])
+if(R.cmd(")"))return 1;R.st(d)
+R.wordRc("test",49,null);R.st(d)
+if(R.ow===true){return{tail:R.l(31)}}
+},src:K[99],unit:-1}],
+[K[100],{fn:(R,d)=>{
+R.wordRc("0",25,0);R.st(d)
+if(R.cmd("("))return 1;R.st(d)
+R.interpOp(K[101])
+R.wordRc("1",27,1);R.st(d)
+R.wordRc("_K",61,null);R.st(d)
+if(R.cmd("-"))return 1;R.st(d)
+R.interpOp(K[102])
+R.wordRc("_tn",59,null);R.st(d)
+R.wordRc("-1",38,-1);R.st(d)
+if(R.cmd("l="))return 1;R.st(d)
+R.wordRc("_tq",62,null);R.st(d)
+R.wordRc("-1",38,-1);R.st(d)
+R.wordRc("_c",35,null);R.st(d)
+if(R.cmd("[l]"))return 1;R.st(d)
+R.interpOp(K[76])
+if(R.cmd(")"))return 1;R.st(d)
+if(R.cmd("~"))return 1;R.st(d)
+return{tail:R.l(28)}
+},src:K[100],unit:-1}],
+[K[103],{fn:(R,d)=>{
+R.wordRc("0",25,0);R.st(d)
+if(R.cmd("("))return 1;R.st(d)
+R.wordRc("_tn",59,null);R.st(d)
+R.wordRc("-1",38,-1);R.st(d)
+R.wordRc("_k",60,null);R.st(d)
+if(R.cmd("[l]"))return 1;R.st(d)
+R.interpOp(K[101])
+R.wordRc("0",25,0);R.st(d)
+if(R.cmd(">>"))return 1;R.st(d)
+if(R.cmd(")"))return 1;R.st(d)
+if(R.ow===true){return{tail:R.l(29)}}
+},src:K[103],unit:-1}],
+[K[104],{fn:(R,d)=>{
+if(R.lookup(16))return 1;R.st(d)
+R.wordRc("2",36,2);R.st(d)
+R.wordRc("pow",156,null);R.st(d)
+R.popTo(16)
+},src:K[104],unit:-1}],
+[K[105],{fn:(R,d)=>{
+R.wordRc("2",36,2);R.st(d)
+if(R.cmd("("))return 1;R.st(d)
+R.wordRc("_R",37,null);R.st(d)
+if(R.cmd("^"))return 1;R.st(d)
+if(R.lookup(37))return 1;R.st(d)
+if(R.cmd(")"))return 1;R.st(d)
+},src:K[105],unit:-1}]])
+const S={"names":["=","n","r","rc","rn","$","err","eof","out","threads","_","args","argc","?","std/all.s","3","x","p.v","onclick","button","std/core.s","std/line.s","std/text.s","std/math.s","std/check.s","0","_core.s","1","_times","_times1","_while","_while1","_untilgo","_a","_b","_c","2","_R","-1","neg","drop","nip","if","swap","_t","_d","dup","_q2","_q1","test","when","unless","_q","_x","_dip","dip","_p","keep","rot","_tn","_k","_K","_tq","_n","_wc","_wb","_uq","_uc","_line.s","_drain","_drain1","_pour","_pour1","_spill","_spill1","_map","_map1","_filter","_filter1","_fold","_fold1","_sort","_sort1","_ins","_ins1","_ins2","_unst","_unst1","_v","_lv","_N","_gk","_sn","_si","_i","_I","_shw","gather","spill","_mq","_fq","_oq","fold","times","sub","max","_trash","_keep","_sx","_y","_text.s","_lb","_rb","_nl","_upt","_lot","_format","_format1","_cc","_o","_j","_s","_sp","_L","chars","rev","concat","quote","words","glue","_hs","_r","dec","_ch","map","_fp","_FI","_fa","_f","format","cat","_dk","_dn","_dv","get","_math.s","_mf","_mx","frac","floor","0.5","add","lt","ceil","_md","10","pow","_mp","mul","round","div","gt","_mh","_ml","min","ge","le","eq","_mt","_mb","_ma","sq","sqrt","3.141592653589793","mod","even","not","while","abs","_mc","_mk","gcd","iota","product","_mn","filter","divisors","count","inc","til","sum","sort","_mv","_mi","rand","_check.s","_cp","_cf","_cw","_cg","ok","fail","got","want","same","_ckok","_ckbad","_cq","yes","no","_ckb","_cka","checked","failed","A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z","z","y","v","u","s","q","p","o","m","k","j","i","h","g","e","d","c","b","a","}"],"local":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"mem":[[111,"{"],[112,"}"],[113,"\n"],[114,"a 'A' b 'B' c 'C' d 'D' e 'E' f 'F' g 'G' h 'H' i 'I' j 'J' k 'K' l 'L' m 'M' n 'N' o 'O' p 'P' q 'Q' r 'R' s 'S' t 'T' u 'U' v 'V' w 'W' x 'X' y 'Y' z 'Z'"],[115,"A 'a' B 'b' C 'c' D 'd' E 'e' F 'f' G 'g' H 'h' I 'i' J 'j' K 'k' L 'l' M 'm' N 'n' O 'o' P 'p' Q 'q' R 'r' S 's' T 't' U 'u' V 'v' W 'w' X 'x' Y 'y' Z 'z'"]],"nums":[[12,0],[16,3],[26,1],[68,1],[110,1],[145,1],[195,1],[196,0],[197,0]],"lists":[[11,[]]],"scripts":[[28,["0 \\( _tn -1 _k \\[l] {~_k~} 0 \\>> \\) _times1..?",43]],[29,["0 \\( {~_k~} 1 _K \\- {~_K~} _tn -1 \\l= _tq -1 _c \\[l] {~_c~} \\) \\~ _times..",43]],[30,["0 \\( _wc -1 _c \\[l] {~_c~} \\) test _while1..?",44]],[31,["0 \\( _wb -1 _c \\[l] {~_c~} \\) \\~ _while..",44]],[32,["0 \\( _uq -1 _c \\[l] {~_c~} \\) \\~ 0 \\( _uc -1 _c \\[l] {~_c~} \\) test _untilgo..!",46]],[69,["\\## _d@ 0 \\( {~_d~} 0 \\>> \\) _drain1..?",56]],[70,["_v@ 0 \\( {~_v~} {_dl~_lv~} \\l \\) _drain..",56]],[71,["0 \\( {_dl~_lv~} _N \\#l {~_N~} 0 \\>> \\) _pour1..?",56]],[72,["0 \\( {_dl~_lv~} \\-l _gk -1 _c \\[l] {~$~} {~_c~} \\l \\) _pour..",56]],[73,["0 \\( _sn -1 _c \\[l] _si -1 _i \\[l] {~_c~} _N \\#l {~_i~} {~_N~} \\<< \\) _spill1..?",57]],[74,["0 \\( _sn -1 _c \\[l] _si -1 _i \\[l] {~_c~} {~_i~} _x \\[l] {~_i~} 1 _I \\+ {~_I~} _si -1 \\l= \\) {~_x~} _spill..",57]],[75,["0 \\( {_dl~_lv~} _N \\#l {~_N~} 0 \\>> \\) _map1..?",60]],[76,["0 \\( _mq -1 _c \\[l] {_dl~_lv~} \\-l \\) {~$~} 1 \\( {~_c~} \\~ \\) _map..",60]],[77,["0 \\( {_dl~_lv~} _N \\#l {~_N~} 0 \\>> \\) _filter1..?",61]],[78,["0 \\( _fq -1 _c \\[l] {_dl~_lv~} \\-l \\) {~$~} {~$~} 1 \\( {~_c~} \\~ \\// \\) drop! _filter..",61]],[79,["0 \\( {_dl~_lv~} _N \\#l {~_N~} 0 \\>> \\) _fold1..?",62]],[80,["0 \\( _oq -1 _c \\[l] {_dl~_lv~} \\-l \\) {~$~} {~_c~} \\~ _fold..",62]],[81,["0 \\( {_dl~_lv~} _N \\#l {~_N~} 0 \\>> \\) _sort1..?",74]],[82,["0 \\( {_dl~_lv~} \\-l {~$~} _sx` \\) _ins.. {~_sx~} _unst.. _sort..",74]],[83,["\\## _d@ 0 \\( {~_d~} 0 \\>> \\) _ins1..?",74]],[84,["_y@ 0 \\( {~_y~} {~_sx~} \\>> \\) {~_y~} _ins2..?",74]],[85,["_y@ 0 \\( {~_y~} {_st~_lv~} \\l \\) _ins..",74]],[86,["0 \\( {_st~_lv~} _N \\#l {~_N~} 0 \\>> \\) _unst1..?",74]],[87,["0 \\( {_st~_lv~} \\-l \\) {~$~} _unst..",74]],[116,["0 \\( _fp _N \\#l {~_FI~} {~_N~} \\<< \\) _format1..?",96]],[117,["0 \\( {} _y` _fp {~_FI~} _x \\[l] _fa {~_FI~} _y \\[l] _FI; \\) {~_x~} {~_y~} _format..",96]]],"repl":[["drop",[["_a@","_a@",1,1,null]]],["dup",[["_a@ {~_a~} {~_a~}","_a@ {~_a~} {~_a~}",2,1,null]]],["nip",[["_a@ _b@ {~_a~}","_a@ _b@ {~_a~}",6,1,null]]],["pow",[["2 \\( _R \\^ _R~ \\)","2 \\( _R \\^ _R~ \\)",15,1,null]]],["test",[["_t@ \\## _d@ 0 \\( {~_d~} 0 \\>> \\) dup? 1 0 drop? nip! \\( {~_t~} \\~ \\// \\)","_t@ \\## _d@ 0 \\( {~_d~} 0 \\>> \\) dup? 1 0 drop? nip! \\( {~_t~} \\~ \\// \\)",37,1,null]]]],"gen":136,"replNum":false,"ow":true,"files":[]},P={"events":[[0,"click","x~ 2 pow x@"]],"regions":[[1,null,[["V",16]],[16],0]],"attrs":[],"twoWay":[],"routers":[],"pages":[],"rules":[],"kept":[],"timers":[]}
+const dec=(v)=>v&&typeof v==='object'?('n' in v?Number(v.n.replace('inf','Infinity')):v):v
+const rt=new Rt({lib:Object.fromEntries(S.files),write:(s)=>console.log(s.replace(/^\n/,''))})
+rt.reader=(src)=>{const u=C.get(src);if(u)return u;const w=src.trim();if(w&&!/[\s{}'⟨⟪¦⟫⨝]/.test(w))return{ops:[classify(w,rt.it)],spans:[0],src,unit:-1};return parse(src,rt.it);throw new Error('this text was made while the page ran, and a compiled page has no reader: '+src.slice(0,60))}
+const dom=attachDom(rt,{mount:document.body})
+S.names.forEach((n,i)=>{rt.it.sym(n);rt.it.local[i]=!!S.local[i]})
+rt.mem=[];rt.nums=[];rt.lists=[];rt.scripts=[]
+for(const[i,v]of S.mem)rt.mem[i]=dec(v)
+for(const[i,v]of S.nums)rt.nums[i]=dec(v)
+for(const[i,l]of S.lists)rt.lists[i]=l.map(dec)
+for(const[i,[t,b]]of S.scripts)rt.scripts[i]={u:rt.codeOf(t),b}
+for(const[k,ls]of S.repl)rt.repl.set(k,ls.filter((m)=>!m[4]||rt.natives.has(m[4])).map(([v,t,gen,lib,nat])=>nat?{val:nat,code:{n:rt.natives.get(nat)},gen,nat}:{val:dec(v),code:t===null?null:{u:rt.codeOf(t)},gen,lib:!!lib}))
+rt.gen=S.gen;rt.replNum=S.replNum;rt.ow=S.ow
+dom.resume(P)
+})()
+</script>
+</body>
+</html>

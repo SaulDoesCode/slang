@@ -1,0 +1,7 @@
+<!doctype html><meta charset="utf-8"><body><script type="module">
+import { runS } from './run.js'
+const src = await (await fetch('examples/site.s')).text()
+window.__errs = []
+window.__out = ''
+window.__s = runS(src, { onError: (e) => window.__errs.push(e.msg), write: (s) => (window.__out += s) })
+</script></body>

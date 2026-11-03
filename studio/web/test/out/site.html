@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>s site</title>
+<style id="s-sheet">
+
+body { margin: 0; font: 16px/1.55 system-ui, sans-serif; background: #f4ece1; color: #3b2d20 }
+nav { display: flex; gap: 18px; padding: 14px 28px; background: #fbf6ee; box-shadow: 0 2px 8px rgba(92,62,32,.15) }
+nav a { color: #7a5532; text-decoration: none }
+nav a:hover { text-decoration: underline }
+main { max-width: 760px; margin: 28px auto; padding: 0 20px }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px }
+.card { background: #fbf6ee; padding: 14px 18px; box-shadow: 0 8px 20px -10px rgba(92,62,32,.4) }
+.card h3 { margin: 0 0 6px; color: #7a5532 }
+button { font: inherit; background: #7a5532; color: #fbf6ee; border: 0; padding: 6px 14px; cursor: pointer }
+input { font: inherit; padding: 5px 8px; border: 1px solid #cfb08a; background: #fbf6ee }
+.big { font-size: 2.2em; margin: 0 }
+
+</style>
+</head>
+<body>
+<nav><a href="#/">Home</a> <a href="#/counter">Counter</a> <a href="#/list">List</a></nav> <main data-s="6"><h1>Pages described in s</h1> <p>Each paragraph of this site is s: element words, modifiers, and words of your own.</p> <div class="cards"><article class="card"><h3 data-s="0">Element words</h3> <p data-s="1">The name of an element is a word that makes it, with its classes and id written after the tag.</p></article> <article class="card"><h3 data-s="2">Modifiers</h3> <p data-s="3">Attributes and events stand before the element they shape.</p></article> <article class="card"><h3 data-s="4">Names</h3> <p data-s="5">A brace that reads a name runs again when an event changes that name, nothing else does.</p></article></div></main>
+<script>
+var sCore=function(){
+const RESERVED=["=","n","r","rc","rn","$","err","eof","out","threads","_","args","argc","?"];
+const S_EQ=0,S_N=1,S_R=2,S_RC=3,S_RN=4,S_DOLLAR=5,S_ERR=6,S_EOF=7,S_OUT=8,S_UNDER=10,S_ARGS=11,S_ARGC=12,S_Q=13;
+const UNBOUND=1/0;
+function fmtNum(t){if(t===0)return"0";if(Number.isNaN(t))return"NaN";if(t===1/0)return"inf";if(t===-1/0)return"-inf";const r=String(t);if(!r.includes("e"))return r;const e=r.match(/^(-?)(\d)(?:\.(\d+))?e([+-]\d+)$/),f=e[1],n=e[2]+(e[3]||""),i=+e[4];return i>=0?f+(i>=n.length-1?n+"0".repeat(i-(n.length-1)):n.slice(0,i+1)+"."+n.slice(i+1)):f+"0."+"0".repeat(-i-1)+n}
+function rustParse(i){if(!/^[+-]?((\d+\.?\d*|\.\d+)([eE][+-]?\d+)?|inf|infinity|nan)$/i.test(i))return null;const n=i.toLowerCase().replace(/^\+/,"");return n==="inf"||n==="infinity"?1/0:n==="-inf"||n==="-infinity"?-1/0:n==="nan"||n==="-nan"?NaN:Number(i)}
+function parseNum(n){const r=rustParse(n.trim());return r===null?0:r}
+function canonNum(u){const n=rustParse(u);return n===null?null:fmtNum(n)===u?n:null}
+const valOf=n=>{const c=canonNum(n);return c===null?n:c};
+const text=t=>typeof t=="number"?fmtNum(t):typeof t=="string"?t:t.w;
+const num=e=>typeof e=="number"?e:parseNum(text(e));
+class Interner{constructor(){this.map=new Map,this.names=[],this.local=[];for(const t of RESERVED)this.sym(t)}sym(t){let s=this.map.get(t);return s!==void 0||(s=this.names.length,this.names.push(t),this.local.push(t.length>1&&t[0]===":"),this.map.set(t,s)),s}name(t){return this.names[t]}}
+const osU64=()=>BigInt(Math.floor(Math.random()*4294967296))<<32n|BigInt(Math.floor(Math.random()*4294967296));
+class SErr extends Error{}
+class SExit extends Error{constructor(r){super("exit "+r),this.code=r}}
+class Reads extends Map{add(s){return this.set(s,(this.get(s)||0)+1),this}sub(s){const t=(this.get(s)||0)-1;t>0?this.set(s,t):this.delete(s)}}
+class Rt{constructor(s={}){this.it=new Interner,this.args=[],this.ow=!1,this.mem=[],this.nums=[],this.scripts=[],this.lists=[],this.repl=new Map,this.replNum=!1,this.gen=1,this.bound=UNBOUND,this.frames=[],this.units=new Map,this.unitIds=new Map,this.rng=null,this.fs=[],this.touched=[],this.lmap=new Map,this.site=[-1,0],this.ops=0,this.lib=s.lib||{},this.vfs=s.vfs||new Map,this.write=s.write||(t=>{typeof process<"u"&&process.stdout.write(t)}),this.handles=new Map,this.hostWord=null,this.stdin=s.stdin||null,this.shell=s.shell||null,this.natives=new Map,this.reads=null,this.writes=null,this.tracking=!1,this.lastInterp=null,this.laneAt=null,this.laneStack=[],this.lanesJoined=null,this.laneView=null,this.onJoin=null,this.B={n:1/0},laneWords(this)}}
+Rt.prototype.native=function(t,s){this.natives.set(t,s);const i={val:t,code:{n:s},gen:0,nat:t};this.repl.has(t)||this.repl.set(t,[]),this.repl.get(t).unshift(i)};
+Rt.prototype.fail=function(t){throw new SErr(this.laneAt!==null?`lane ${this.laneAt}: ${t}`:t)};
+Rt.prototype.pop=function(t){return this.args.length||this.fail(`${t}: stack is empty`),this.args.pop()};
+Rt.prototype.name=function(e){const n=this.it.name(e),t=n.indexOf("");return t<0?n:n.slice(0,t)};
+Rt.prototype.l=function(t){return this.it.local[t]?this.localSym(t):t};
+Rt.prototype.localSym=function(i){const s=Math.max(0,this.fs.length-1),e=i+","+s;let t=this.lmap.get(e);return t===void 0&&(t=this.it.sym(this.it.name(i)+""+s),this.it.local[t]=!1,this.lmap.set(e,t)),this.touch(s,t),t};
+Rt.prototype.touch=function(t,h){for(;this.touched.length<=t;)this.touched.push([]);this.touched[t].includes(h)||this.touched[t].push(h)};
+Rt.prototype.clearLocals=function(t){if(t<this.touched.length&&this.touched[t].length){for(const e of this.touched[t])this.mem[e]=void 0,this.nums[e]=void 0,this.lists[e]=void 0,this.scripts[e]=void 0;this.touched[t]=[]}};
+Rt.prototype.visible=function(e){const t=this.repl.get(e);if(!t)return null;for(let n=t.length-1;n>=0;n--)if(t[n].gen<this.bound)return t[n];return null};
+Rt.prototype.tryExpand=function(e){const s=this.visible(e);if(!s)return!1;if(!s.code)this.args.push(s.val);else if(s.code.n){const t=this.bound;this.bound=s.gen,s.code.n(this),this.bound=t}else this.fs.push({body:{ops:s.code.u},pc:0,bound:s.gen,lib:s.lib});return!0};
+Rt.prototype.wordRc=function(r,i,t){if(t!==null){if(this.replNum&&this.tryExpand(r))return;this.args.push(t);return}this.preWord&&this.preWord(r)||this.repl.size&&this.tryExpand(r)||this.hostWord&&this.hostWord(this,r)||this.args.push({w:r,k:i})};
+Rt.prototype.cmdSite=function(t){return this.repl.size&&this.tryExpand(t)?!1:this.cmd(t)};
+Rt.prototype.popTo=function(t){t=this.l(t),this.args.length||this.fail(`${this.name(t)}@: stack is empty`),this.mset(t,this.args.pop())};
+Rt.prototype.need=function(t,s){this.args.length<t&&this.fail(`${s}: needs ${t} args, stack has ${this.args.length}`)};
+Rt.prototype.argSym=function(o){const t=this.args[o],s=typeof t=="object"?t.k:this.it.sym(text(t));return this.l(s)};
+Rt.prototype.nset=function(t,i){this.nums[t]=i,this.writes&&this.writes.add(t)};
+Rt.prototype.mset=function(t,i){this.mem[t]=i,this.writes&&this.writes.add(t)};
+Rt.prototype.wrote=function(t){this.writes&&this.writes.add(t)};
+Rt.prototype.read=function(t){this.reads&&this.reads.add(t)};
+Rt.prototype.getVal=function(t){return this.reads&&this.reads.add(t),this.mem[t]!==void 0?this.mem[t]:this.nums[t]!==void 0?this.nums[t]:t===S_Q?String(osU64()):"404"};
+Rt.prototype.interp=function(t){return text(this.getVal(this.l(t)))};
+Rt.prototype.joined=function(){return this.args.map(text).join(" ")};
+Rt.prototype.setMem=function(t){t=this.l(t);const s=this.args.length===1?this.args.pop():valOf(this.joined());this.args=[],this.mset(t,s)};
+Rt.prototype.setNum=function(t){t=this.l(t);const s=this.args.length?num(this.args[0]):0;this.args=[],this.nset(t,s)};
+Rt.prototype.incBy=function(t,i){t=this.l(t);let s=1;this.args.length&&(s=num(this.args[0]),this.args=[]);const n=this.nums[t]??0;this.nset(t,n+i*s)};
+Rt.prototype.codeOf=function(t){let i=this.units.get(t);return i||(i=this.reader?this.reader(t):parse(t,this.it),i.unit=this.unitIds.has(t)?this.unitIds.get(t):-1,this.units.size>4096&&this.units.clear(),this.units.set(t,i),i)};
+Rt.prototype.inLib=function(){const t=this.fs[this.fs.length-1];return!!(t&&t.lib)};
+Rt.prototype.frameFor=function(n){const t=this.scripts[n];if(t)return t.n?(t.n(this),null):{body:{ops:t.u},pc:0,bound:t.b};const i=this.name(n);if(this.fileFrame&&this.fileText(i)!==null)return this.fileFrame(i);this.fail(`${i}.: no script or file named '${i}'`)};
+Rt.prototype.call=function(f){const t=this.frameFor(f);t&&this.fs.push(t)};
+Rt.prototype.count=function(r,n){const t=this.args[r],e=typeof t=="number"?t:rustParse(text(t).trim())??NaN;if(Number.isFinite(e)&&e>=0&&Number.isInteger(e))return e;this.fail(`${n}: repeat count must be a whole number >= 0, got '${text(t)}'`)};
+Rt.prototype.repeat=function(t){const n=this.count(0,this.name(t)+".");this.fs.push({body:{rep:{k:t,i:0,n,amp:!1}},pc:0,bound:this.bound})};
+Rt.prototype.srcFrame=function(e){let t;try{t=this.codeOf(e)}catch(o){this.fail("parse: "+o.message)}return{body:{ops:t},pc:0,bound:UNBOUND}};
+Rt.prototype.runSrc=function(t){this.fs.push(this.srcFrame(t))};
+Rt.prototype.hostFrame=function(o){return{body:{host:o},pc:0,bound:this.bound}};
+Rt.prototype.guarded=function(t){try{return t(this),null}catch(r){return this.statusOf(r)}};
+Rt.prototype.statusOf=function(e){let t;if(e instanceof SErr)t={error:e.message};else if(e instanceof SExit)t={exit:e.code};else if(e instanceof RangeError)t={error:"too deep: "+e.message};else throw e;for(this.resetFrames(),this.laneView&&this.endView();this.laneStack.length;)this.useState(this.laneStack.pop().fork);return this.laneAt=null,t};
+Rt.prototype.resetFrames=function(){for(;this.fs.length;)this.fs.pop(),this.clearLocals(this.fs.length)};
+Rt.prototype.runText=function(t,n=1/0){const r=this.guarded(u=>u.runSrc(t));return r||this.run(n)};
+Rt.prototype.run=function(t=1/0){t>Number.MAX_SAFE_INTEGER&&(t=Number.MAX_SAFE_INTEGER);const s={n:t},i=this.B;this.B=s;try{const n=this.runTo(0);return this.ops+=t-s.n,n}catch(n){return this.ops+=t-s.n,this.statusOf(n)}finally{this.B=i}};
+Rt.prototype.runTo=function(t){for(;;)try{return this.runInner(this.B,t)}catch(r){if(!(r instanceof SErr)||!this.recover||!this.recover(r,t))throw r}};
+Rt.prototype.st=function(t){this.fs.length>t+1&&this.runTo(t+1),this.bound=this.fs[t].bound};
+Rt.prototype.endFrame=function(t){this.clearLocals(t),this.fs.splice(t,1),t<this.touched.length&&this.touched.splice(t,1)};
+Rt.prototype.tailInto=function(s,e){this.clearLocals(s);const t=this.frameFor(e);if(t)if(this.fs.length>s+1){const f=this.fs.splice(s+1);this.fs[s]=t,this.fs.push(...f)}else this.fs[s]=t;else this.endFrame(s)};
+Rt.prototype.runInner=function(s,r=0){for(;;){const o=this.fs.length;if(o<=r)return"done";if(s.n<=0)return"ran";const t=o-1,i=this.fs[t];this.bound=i.bound;const n=i.body;if(n.ops&&n.ops.fn){s.n--;const e=n.ops.fn(this,t);e&&e.tail!==void 0?this.tailInto(t,e.tail):this.endFrame(t)}else if(n.ops){if(this.interpret(s,t,i))return"ran"}else n.rep?(s.n--,this.repStep(t,n.rep)):n.host&&(s.n--,this.endFrame(t),n.host(this))}};
+Rt.prototype.repStep=function(i,t){if(t.i<t.n){const s=t.i;t.i++,t.amp&&this.nset(S_N,s),this.args=[],this.call(t.k)}else this.args=[],this.endFrame(i)};
+Rt.prototype.interpOp=function(n){const i=this.reads,t=this.tracking?new Set:null;t&&(this.reads=t);let e="";for(const s of n)e+=s[0]==="T"?s[1]:this.interp(s[1]);this.reads=i;const o=valOf(e);if(this.args.push(o),t){if(i)for(const s of t)i.add(s);this.lastInterp={v:o,parts:n,reads:t,at:this.args.length}}};
+Rt.prototype.list=function(t){return this.lists[t]||(this.lists[t]=[]),this.lists[t]};
+Rt.prototype.cmd=function(t){const i=CMD[t];i||this.fail(`${t}: not part of this page`);const n=i.call(this,t);return n!==void 0?n:(this.args=[],!1)};
+const CMD={};
+CMD.l=function(t){this.need(2,t);const i=this.args[0],s=this.argSym(1);this.list(s).push(i),this.wrote(s)};
+CMD["l-"]=function(i){this.need(1,i);const t=this.argSym(0);this.lists[t]=void 0,this.wrote(t)};
+function laneWords(rt) {const w=(t,n)=>rt.native(t,n);
+}
+const VOID=new Set(["area","base","br","col","embed","hr","img","input","link","meta","source","track","wbr"]);
+const TAGS=new Set("a abbr address article aside audio b bdi bdo blockquote body br button canvas caption cite code col colgroup data datalist dd del details dfn dialog div dl dt em fieldset figcaption figure footer form h1 h2 h3 h4 h5 h6 header hgroup hr i iframe img input ins kbd label legend li link main map mark menu meta meter nav noscript object ol optgroup option output p picture pre progress q rp rt ruby s samp section select slot small source span strong sub summary sup table tbody td template textarea tfoot th thead time tr track u ul var video wbr".split(" "));
+const EVENTS=new Set("click dblclick input change submit keydown keyup focus blur mouseenter mouseleave mousedown mouseup pointerdown pointerup contextmenu wheel scroll load toggle".split(" "));
+const kebab=e=>e.replace(/[A-Z]/g,a=>"-"+a.toLowerCase());
+function elementSpec(a){const e=/^<?([a-z][a-z0-9]*)((?:[.#][A-Za-z_][\w-]*)*)$/.exec(a);if(!e||!TAGS.has(e[1]))return null;const s=[],n=[];for(const t of e[2].match(/[.#][A-Za-z_][\w-]*/g)||[])(t[0]==="."?s:n).push(kebab(t.slice(1)));return{tag:e[1],classes:s,id:n[n.length-1]||null}}
+const attrWord=t=>/^[a-z][\w-]*=$/.test(t);
+const eventWord=t=>t.length>2&&t.startsWith("on")&&EVENTS.has(t.slice(2));
+const selWord=s=>/^\$[.#a-zA-Z[:*]/.test(s);
+const component=(e,t)=>/^[A-Z]/.test(t)&&e.repl.has(t);
+function isCode(r,n){if(/[{}'⟨⟪⨝]/.test(n))return!0;const t=n.split(/\s+/).filter(Boolean),s=t[t.length-1];if(t.length>1&&s.length>1&&elementSpec(s))return!0;for(const e of t)if((e[0]==="<"||/[.#]/.test(e))&&elementSpec(e)||selWord(e)||attrWord(e)||eventWord(e)||component(r,e)||e==="&&&"||e==="~"||e==="?)"||e==="><"||e==="##"||e.length>1&&e.endsWith(".")&&r.scripts[r.it.sym(e.replace(/\.+$/,""))])return!0;return!1}
+const fresh=()=>({classes:[],attrs:[],events:[],at:null,routes:!1});
+const evalParts=(n,t)=>t.map(a=>a[0]==="T"?a[1]:n.interp(a[1])).join("");
+function attachDom(rt, opts = {}) {const doc=opts.document||document;
+const win=doc.defaultView;
+const mount=opts.mount||doc.body;
+const store=opts.storage===void 0?safeStorage(win):opts.storage;
+const D={mount,parents:[mount],pending:fresh(),regions:[],attrs:[],twoWay:[],events:[],timers:[],pages:new Map,routers:[],kept:new Set,rules:new Set,all:!1,busy:!1,onError:opts.onError||(e=>console.error("s:",e)),budget:opts.budget||5e6};
+rt.dom=D;
+rt.tracking=!0;
+const top=()=>D.parents[D.parents.length-1];
+function flushText(t,e){if(!rt.args.length)return;const n=rt.args.map(text).join(" ");if(rt.args=[],!n)return;const r=!e&&t.childNodes.length?" ":"";t.append(doc.createTextNode(r+n+(e?" ":"")))}
+function interpolated(){const t=rt.lastInterp;if(!t||t.at!==rt.args.length||rt.args[rt.args.length-1]!==t.v)return null;if(rt.lastInterp=null,rt.reads instanceof Reads)for(const r of t.reads)rt.reads.sub(r);return t}
+function runChildren(r,s,t,e,a){if(!a){s&&r.append(doc.createTextNode(s)),e&&e.size&&D.regions.push({el:r,code:t?null:s,parts:t,reads:new Set(e),c:a});return}const o=rt.args,d=rt.reads;if(rt.args=[],rt.reads=new Reads,e)for(const n of e)rt.reads.add(n);D.parents.push(r),rt.fs.push(rt.hostFrame(()=>{flushText(r,!1),D.parents.pop(),rt.args=o;const n=rt.reads;rt.reads=d,n.size&&D.regions.push({el:r,code:t?null:s,parts:t,reads:new Set(n.keys()),c:a})})),rt.runSrc(s)}
+function codeOf(e,n){return isCode(rt,n?n.map(o=>o[0]==="T"?o[1]:" x ").join(""):e)}
+const kids=(u,n,l=null,d=null)=>runChildren(u,n,l,d,codeOf(n,l));
+function apply(s,e){e.classes.length&&s.classList.add(...e.classes);for(const[a,n,t]of e.attrs){if(t&&(a==="value"||a==="checked")&&/^(INPUT|SELECT|TEXTAREA)$/.test(s.tagName)&&t.parts.length===1&&t.parts[0][0]==="V"){twoWay(s,t.parts[0][1]);continue}setAttr(s,a,n),t&&t.reads.size&&D.attrs.push({el:s,name:a,parts:t.parts,reads:new Set(t.reads)})}for(const[a,n]of e.events)listen(s,a,n)}
+function setAttr(e,s,t){s==="class"?e.classList.add(...t.split(/\s+/).filter(Boolean)):s==="style"?e.style.cssText+=";"+t:s==="value"&&"value"in e?(e.value=t,e.setAttribute("value",t)):s==="checked"&&"checked"in e?(e.checked=t!==""&&t!=="0",e.checked&&e.setAttribute("checked","")):e.setAttribute(s,t)}
+function listen(n,t,i){D.events.push({el:n,ev:t,code:i}),n.addEventListener(t,s=>{t==="submit"&&s.preventDefault(),handler(i,s,n)})}
+function element(t){const l=D.pending;D.pending=fresh();let i=null,n=null;VOID.has(t.tag)||(rt.args.length||rt.fail(`${t.tag}: needs its children, a brace (or {} for none)`),n=interpolated(),i=text(rt.args.pop()));const a=l.at?query(l.at):top();l.at||flushText(a,!0);const e=doc.createElement(t.tag);if(t.classes.length&&e.classList.add(...t.classes),t.id&&(e.id=t.id),apply(e,l),a.lastChild&&a.lastChild.nodeType===1&&a.append(doc.createTextNode(" ")),a.append(e),l.routes){D.routers.push(e);const r=currentPage();r!==null&&kids(e,r);return}i!==null&&kids(e,i,n?n.parts:null,n?n.reads:null)}
+function query(e){const t=doc.querySelector(e);return t||rt.fail(`no element matches ${e}`),t}
+rt.hostWord=(s,e,r)=>{if(e[0]==="<"||!r){const t=elementSpec(e);if(t)return element(t),!0}if(attrWord(e)){const t=interpolated(),n=text(rt.pop(e));return D.pending.attrs.push([e.slice(0,-1),n,t]),!0}if(eventWord(e)){const t=text(rt.pop(e));return D.pending.events.push([e.slice(2),t]),!0}if(selWord(e)){const t=text(rt.pop(e));return kids(query(e.slice(1)),t),!0}return!1};
+rt.preWord=e=>{if(!TAGS.has(e))return!1;const r=rt.visible(e);return!r||!r.lib||rt.inLib()?!1:(element(elementSpec(e)),!0)};
+function act(t,r){if(D.busy){rt.runSrc(t);return}D.busy=!0,rt.args=[],D.parents=[mount];const e=rt.writes;rt.writes=new Set;const s=rt.runText(t,D.budget),n=rt.writes;rt.writes=e,D.busy=!1,report(s,r),D.kept.size&&save(),refresh(n)}
+function report(r,e){r==="ran"?D.onError({msg:`${e}: stopped after ${D.budget} ops`,code:rt.siteCode,pc:rt.site[1]}):r&&r.error&&D.onError({msg:r.error,code:rt.siteCode,pc:rt.site[1]})}
+function handler(n,t,e){typeof setEventNames=="function"&&setEventNames(t,e),act(n,"on"+(t?t.type:""))}
+function nameText(e){return rt.mem[e]!==void 0?text(rt.mem[e]):rt.nums[e]!==void 0?text(rt.nums[e]):""}
+function showName(e,c){const t=nameText(c);e.type==="checkbox"?(e.checked=t!==""&&num(t)!==0,e.toggleAttribute("checked",e.checked)):e.value!==t&&(e.value=t,e.setAttribute("value",t))}
+function twoWay(e,t){e.dataset.bind=rt.name(t),D.twoWay.push({el:e,k:t}),showName(e,t),e.addEventListener(e.tagName==="SELECT"||e.type==="checkbox"?"change":"input",()=>{e.type==="checkbox"?(rt.nums[t]=e.checked?1:0,rt.mem[t]=void 0):rt.mem[t]=valOf(e.value),D.kept.size&&save(),refresh(new Set([t]))})}
+const meets=(e,r)=>{for(const t of e)if(r.has(t))return!0;return!1};
+function refresh(n){if(D.all&&(D.all=!1,n="all"),D.busy){n==="all"&&(D.all=!0);return}if(n!=="all"&&(!n||!n.size))return;const i=e=>n==="all"||meets(e.reads,n),l=doc.activeElement,c=l&&l!==doc.body&&(l.id?"#"+l.id:l.dataset&&l.dataset.bind?`[data-bind="${l.dataset.bind}"]`:null),o=l&&"selectionStart"in l?(()=>{try{return[l.selectionStart,l.selectionEnd]}catch{return null}})():null;D.busy=!0;const a=e=>e.el.isConnected;D.regions=D.regions.filter(a);let s=D.regions.filter(i);if(n==="all")for(const e of D.routers)e.isConnected&&s.push({el:e,router:!0});s=s.filter(e=>!s.some(r=>r!==e&&r.el!==e.el&&r.el.contains(e.el)));for(const e of s){if(!e.el.isConnected)continue;const r=t=>t.el!==e.el&&e.el.contains(t.el);if(D.regions=D.regions.filter(t=>t!==e&&!(e.router&&t.el===e.el)&&!r(t)),D.attrs=D.attrs.filter(t=>!r(t)),D.twoWay=D.twoWay.filter(t=>!r(t)),D.events=D.events.filter(t=>!r(t)),D.routers=D.routers.filter(t=>t===e.el||!e.el.contains(t)),e.el.replaceChildren(),rt.args=[],D.parents=[mount],e.router){const t=currentPage();t!==null&&kids(e.el,t)}else if(e.parts){const t=new Set,u=rt.reads;rt.reads=t;const f=evalParts(rt,e.parts);rt.reads=u,runChildren(e.el,f,e.parts,t,e.c)}else runChildren(e.el,e.code,null,null,e.c);report(rt.run(D.budget),"update"),rt.args=[]}if(D.attrs.length&&refreshAttrs(i,a),D.twoWay.length&&refreshInputs(n,a),D.parents=[mount],D.busy=!1,c){const e=doc.querySelector(c);if(e&&e!==doc.activeElement&&(e.focus(),o&&"setSelectionRange"in e))try{e.setSelectionRange(o[0],o[1])}catch{}}D.all&&refresh("all")}
+function refreshAttrs(s,a){D.attrs=D.attrs.filter(a);for(const t of D.attrs){if(!s(t))continue;const e=new Set,n=rt.reads;rt.reads=e;const r=evalParts(rt,t.parts);rt.reads=n,t.reads=e,t.name==="class"||t.name==="style"?t.el.setAttribute(t.name,r):setAttr(t.el,t.name,r)}}
+function refreshInputs(o,t){D.twoWay=D.twoWay.filter(t);for(const e of D.twoWay)(o==="all"||o.has(e.k))&&!(e.el===doc.activeElement&&e.el.type!=="checkbox")&&showName(e.el,e.k)}
+function currentPage(){const e=decodeURIComponent((win.location.hash||"").replace(/^#\/?/,""));if(D.pages.has(e))return D.pages.get(e);const n=D.pages.values().next();return n.done?null:n.value}
+function onHash(){if(!D.routers.length)return;D.busy=!0;const n=D.routers.filter(e=>e.isConnected);D.busy=!1;for(const e of n){D.busy=!0,D.regions=D.regions.filter(t=>!e.contains(t.el)),D.attrs=D.attrs.filter(t=>!e.contains(t.el)),D.twoWay=D.twoWay.filter(t=>!e.contains(t.el)),D.events=D.events.filter(t=>!e.contains(t.el)),e.replaceChildren(),rt.args=[],D.parents=[mount];const r=currentPage();r!==null&&kids(e,r),report(rt.run(D.budget),"page"),D.busy=!1}}
+win.addEventListener("hashchange",onHash);
+function restore(e){if(!store)return;let t;try{t=JSON.parse(store.getItem("s:"+e)||"null")}catch{t=null}if(!t)return;const r=rt.it.sym(e);return"mem"in t&&(rt.mem[r]=t.mem),"num"in t&&(rt.nums[r]=t.num),"list"in t&&(rt.lists[r]=t.list),r}
+function save(){if(store)for(const n of D.kept){const t=rt.it.sym(n),e={};rt.mem[t]!==void 0&&(e.mem=typeof rt.mem[t]=="object"?rt.mem[t].w:rt.mem[t]),rt.nums[t]!==void 0&&(e.num=rt.nums[t]),rt.lists[t]!==void 0&&(e.list=rt.lists[t].map(m=>typeof m=="object"?m.w:m));try{store.setItem("s:"+n,JSON.stringify(e))}catch{}}}
+const word=(t,n)=>rt.native(t,n);
+word("each",t=>{const i=text(t.pop("each")),m=text(t.pop("each")),s=t.it.sym(m);t.read(s);const n=(t.lists[s]||[]).slice(),o=t.it.sym("it"),c=t.it.sym("i");for(let e=n.length-1;e>=0;e--)t.runSrc(i),t.fs.push(t.hostFrame(()=>{t.mem[o]=n[e],t.nums[c]=e,t.mem[c]=void 0}))});
+const timer=t=>e=>{const o=Math.max(16,num(e.pop(t?"every":"after"))),m=text(e.pop(t?"every":"after"));startTimer(m,o,t)};
+function startTimer(n,t,i){const e=()=>act(n,i?"every":"after");D.timers.push({id:i?win.setInterval(e,t):win.setTimeout(e,t),code:n,ms:t,repeat:i})}
+word("after",timer(!1));
+const api={};
+api.resume=function(t){const s=e=>doc.querySelector(`[data-s="${e}"]`);for(const e of["events","regions","attrs","twoWay","pages","rules","kept","timers","routers"])t[e].length&&RESUME[e](t[e],s)};
+const RESUME={};
+RESUME.regions=function(e,o){for(const[s,n,r,c,i]of e)D.regions.push({el:o(s),code:n,parts:r,reads:new Set(c),c:!!i})};
+RESUME.pages=function(n){for(const[o,s]of n)D.pages.set(o,s)};
+RESUME.kept=function(f){const e=new Set;for(const n of f){D.kept.add(n);const t=restore(n);t!==void 0&&e.add(t)}e.size&&refresh(e)};
+RESUME.routers=function(o,n){for(const s of o)D.routers.push(n(s));(win.location.hash||"").length>1&&onHash()};
+return api
+}
+function safeStorage(e){try{const t=e.localStorage;return t.getItem("x"),t}catch{return null}}
+return{Rt,attachDom}};
+
+(()=>{
+const {Rt,attachDom,classify,parse}=sCore()
+const K=["Names","A brace that reads a name runs again when an event changes that name, nothing else does.","\n  {A list that stays} h1\n  {What next?} placeholder= {~draft~} value= input\n  {{~draft~} todos l  {} draft`} onclick {Add} button\n  {todos l-} onclick {Clear} button\n  {todos {{~it~} li} each} ul\n","A list that stays","What next?",[["V",55]],"{~draft~} todos l  {} draft`","Add","todos l-","Clear","todos {{~it~} li} each","{~it~} li",[["V",62]],"","\n  {Counter} h1\n  {\n    {~count~} p.big\n    {count;} onclick {+1} button\n    {0 count#} onclick {reset} button\n  } section\n","Counter","\n    {~count~} p.big\n    {count;} onclick {+1} button\n    {0 count#} onclick {reset} button\n  ",[["V",21]],"count;","+1","0 count#","reset","\n  {Pages described in s} h1\n  {Each paragraph of this site is s: element words, modifiers, and words of your own.} p\n  {\n    {Element words} {The name of an element is a word that makes it, with its classes and id written after the tag.} Card\n    {Modifiers} {Attributes and events stand before the element they shape.} Card\n    {Names} {A brace that reads a name runs again when an event changes that name, nothing else does.} Card\n  } div.cards\n","Pages described in s","Each paragraph of this site is s: element words, modifiers, and words of your own.","\n    {Element words} {The name of an element is a word that makes it, with its classes and id written after the tag.} Card\n    {Modifiers} {Attributes and events stand before the element they shape.} Card\n    {Names} {A brace that reads a name runs again when an event changes that name, nothing else does.} Card\n  ","Element words","The name of an element is a word that makes it, with its classes and id written after the tag.","Modifiers","Attributes and events stand before the element they shape.","_cb@ _ch@ {{~_ch~} h3 {~_cb~} p} article.card","{~_ch~} h3 {~_cb~} p",[["V",29]],[["V",28]]]
+const L=[]
+const C=new Map([[K[0],{fn:(R,d)=>{
+R.wordRc("Names",38,null);R.st(d)
+},src:K[0],unit:-1}],
+[K[1],{fn:(R,d)=>{
+R.wordRc("A",39,null);R.st(d)
+R.wordRc("brace",40,null);R.st(d)
+R.wordRc("that",41,null);R.st(d)
+R.wordRc("reads",42,null);R.st(d)
+R.wordRc("a",32,null);R.st(d)
+R.wordRc("name",43,null);R.st(d)
+R.wordRc("runs",44,null);R.st(d)
+R.wordRc("again",45,null);R.st(d)
+R.wordRc("when",46,null);R.st(d)
+R.wordRc("an",47,null);R.st(d)
+R.wordRc("event",48,null);R.st(d)
+R.wordRc("changes",49,null);R.st(d)
+R.wordRc("that",41,null);R.st(d)
+R.wordRc("name,",50,null);R.st(d)
+R.wordRc("nothing",51,null);R.st(d)
+R.wordRc("else",52,null);R.st(d)
+{const k=R.l(53);if(R.args.length===1){R.repeat(k);R.st(d);return}return{tail:k}}
+},src:K[1],unit:-1}],
+[K[2],{fn:(R,d)=>{
+R.args.push(K[3])
+R.wordRc("h1",33,null);R.st(d)
+R.args.push(K[4])
+R.wordRc("placeholder=",54,null);R.st(d)
+R.interpOp(K[5])
+R.wordRc("value=",56,null);R.st(d)
+R.wordRc("input",57,null);R.st(d)
+R.args.push(K[6])
+R.wordRc("onclick",58,null);R.st(d)
+R.args.push(K[7])
+R.wordRc("button",59,null);R.st(d)
+R.args.push(K[8])
+R.wordRc("onclick",58,null);R.st(d)
+R.args.push(K[9])
+R.wordRc("button",59,null);R.st(d)
+R.args.push(K[10])
+R.wordRc("ul",60,null);R.st(d)
+},src:K[2],unit:-1}],
+[K[10],{fn:(R,d)=>{
+R.wordRc("todos",23,null);R.st(d)
+R.args.push(K[11])
+R.wordRc("each",61,null);R.st(d)
+},src:K[10],unit:-1}],
+[K[11],{fn:(R,d)=>{
+R.interpOp(K[12])
+R.wordRc("li",63,null);R.st(d)
+},src:K[11],unit:-1}],
+[K[9],{fn:(R,d)=>{
+R.wordRc("Clear",64,null);R.st(d)
+},src:K[9],unit:-1}],
+[K[8],{fn:(R,d)=>{
+R.wordRc("todos",23,null);R.st(d)
+if(R.cmdSite("l-"))return 1;R.st(d)
+},src:K[8],unit:-1}],
+[K[7],{fn:(R,d)=>{
+R.wordRc("Add",65,null);R.st(d)
+},src:K[7],unit:-1}],
+[K[6],{fn:(R,d)=>{
+R.interpOp(K[5])
+R.wordRc("todos",23,null);R.st(d)
+if(R.cmdSite("l"))return 1;R.st(d)
+R.args.push(K[13])
+R.setMem(55)
+},src:K[6],unit:-1}],
+[K[13],{fn:(R,d)=>{
+
+},src:K[13],unit:-1}],
+[K[4],{fn:(R,d)=>{
+R.wordRc("What",66,null);R.st(d)
+if(R.ow===true){R.wordRc("next",67,null);R.st(d)}
+},src:K[4],unit:-1}],
+[K[3],{fn:(R,d)=>{
+R.wordRc("A",39,null);R.st(d)
+R.wordRc("list",25,null);R.st(d)
+R.wordRc("that",41,null);R.st(d)
+R.wordRc("stays",68,null);R.st(d)
+},src:K[3],unit:-1}],
+[K[14],{fn:(R,d)=>{
+R.args.push(K[15])
+R.wordRc("h1",33,null);R.st(d)
+R.args.push(K[16])
+R.wordRc("section",69,null);R.st(d)
+},src:K[14],unit:-1}],
+[K[16],{fn:(R,d)=>{
+R.interpOp(K[17])
+R.wordRc("p.big",70,null);R.st(d)
+R.args.push(K[18])
+R.wordRc("onclick",58,null);R.st(d)
+R.args.push(K[19])
+R.wordRc("button",59,null);R.st(d)
+R.args.push(K[20])
+R.wordRc("onclick",58,null);R.st(d)
+R.args.push(K[21])
+R.wordRc("button",59,null);R.st(d)
+},src:K[16],unit:-1}],
+[K[21],{fn:(R,d)=>{
+R.wordRc("reset",71,null);R.st(d)
+},src:K[21],unit:-1}],
+[K[20],{fn:(R,d)=>{
+R.wordRc("0",20,0);R.st(d)
+R.setNum(21)
+},src:K[20],unit:-1}],
+[K[19],{fn:(R,d)=>{
+R.wordRc("+1",72,null);R.st(d)
+},src:K[19],unit:-1}],
+[K[18],{fn:(R,d)=>{
+R.incBy(21,1)
+},src:K[18],unit:-1}],
+[K[15],{fn:(R,d)=>{
+R.wordRc("Counter",73,null);R.st(d)
+},src:K[15],unit:-1}],
+[K[22],{fn:(R,d)=>{
+R.args.push(K[23])
+R.wordRc("h1",33,null);R.st(d)
+R.args.push(K[24])
+R.wordRc("p",34,null);R.st(d)
+R.args.push(K[25])
+R.wordRc("div.cards",35,null);R.st(d)
+},src:K[22],unit:-1}],
+[K[25],{fn:(R,d)=>{
+R.args.push(K[26])
+R.args.push(K[27])
+R.wordRc("Card",16,null);R.st(d)
+R.args.push(K[28])
+R.args.push(K[29])
+R.wordRc("Card",16,null);R.st(d)
+R.args.push(K[0])
+R.args.push(K[1])
+R.wordRc("Card",16,null);R.st(d)
+},src:K[25],unit:-1}],
+[K[29],{fn:(R,d)=>{
+R.wordRc("Attributes",74,null);R.st(d)
+R.wordRc("and",75,null);R.st(d)
+R.wordRc("events",76,null);R.st(d)
+R.wordRc("stand",77,null);R.st(d)
+R.wordRc("before",78,null);R.st(d)
+R.wordRc("the",79,null);R.st(d)
+R.wordRc("element",80,null);R.st(d)
+R.wordRc("they",81,null);R.st(d)
+{const k=R.l(82);if(R.args.length===1){R.repeat(k);R.st(d);return}return{tail:k}}
+},src:K[29],unit:-1}],
+[K[28],{fn:(R,d)=>{
+R.wordRc("Modifiers",83,null);R.st(d)
+},src:K[28],unit:-1}],
+[K[30],{fn:(R,d)=>{
+R.popTo(28)
+R.popTo(29)
+R.args.push(K[31])
+R.wordRc("article.card",30,null);R.st(d)
+},src:K[30],unit:-1}],
+[K[31],{fn:(R,d)=>{
+R.interpOp(K[32])
+R.wordRc("h3",37,null);R.st(d)
+R.interpOp(K[33])
+R.wordRc("p",34,null);R.st(d)
+},src:K[31],unit:-1}],
+[K[27],{fn:(R,d)=>{
+R.wordRc("The",84,null);R.st(d)
+R.wordRc("name",43,null);R.st(d)
+R.wordRc("of",85,null);R.st(d)
+R.wordRc("an",47,null);R.st(d)
+R.wordRc("element",80,null);R.st(d)
+R.wordRc("is",86,null);R.st(d)
+R.wordRc("a",32,null);R.st(d)
+R.wordRc("word",87,null);R.st(d)
+R.wordRc("that",41,null);R.st(d)
+R.wordRc("makes",88,null);R.st(d)
+R.wordRc("it,",89,null);R.st(d)
+R.wordRc("with",90,null);R.st(d)
+R.wordRc("its",91,null);R.st(d)
+R.wordRc("classes",92,null);R.st(d)
+R.wordRc("and",75,null);R.st(d)
+R.wordRc("id",93,null);R.st(d)
+R.wordRc("written",94,null);R.st(d)
+R.wordRc("after",95,null);R.st(d)
+R.wordRc("the",79,null);R.st(d)
+{const k=R.l(96);if(R.args.length===1){R.repeat(k);R.st(d);return}return{tail:k}}
+},src:K[27],unit:-1}],
+[K[26],{fn:(R,d)=>{
+R.wordRc("Element",97,null);R.st(d)
+R.wordRc("words",98,null);R.st(d)
+},src:K[26],unit:-1}],
+[K[24],{fn:(R,d)=>{
+R.wordRc("Each",99,null);R.st(d)
+R.wordRc("paragraph",100,null);R.st(d)
+R.wordRc("of",85,null);R.st(d)
+R.wordRc("this",101,null);R.st(d)
+R.wordRc("site",102,null);R.st(d)
+R.wordRc("is",86,null);R.st(d)
+R.incBy(103,-1)
+R.wordRc("element",80,null);R.st(d)
+R.wordRc("words,",104,null);R.st(d)
+R.wordRc("modifiers,",105,null);R.st(d)
+R.wordRc("and",75,null);R.st(d)
+R.wordRc("words",98,null);R.st(d)
+R.wordRc("of",85,null);R.st(d)
+R.wordRc("your",106,null);R.st(d)
+{const k=R.l(36);if(R.args.length===1){R.repeat(k);R.st(d);return}return{tail:k}}
+},src:K[24],unit:-1}],
+[K[23],{fn:(R,d)=>{
+R.wordRc("Pages",107,null);R.st(d)
+R.wordRc("described",108,null);R.st(d)
+R.wordRc("in",109,null);R.st(d)
+R.wordRc("s",103,null);R.st(d)
+},src:K[23],unit:-1}]])
+const S={"names":["=","n","r","rc","rn","$","err","eof","out","threads","_","args","argc","?","title","sheet","Card","nav","home","page","0","count","counter","todos","keep","list","routes","main","_cb","_ch","article.card","href=","a","h1","p","div.cards","own","h3","Names","A","brace","that","reads","name","runs","again","when","an","event","changes","name,","nothing","else","does","placeholder=","draft","value=","input","onclick","button","ul","each","it","li","Clear","Add","What","next","stays","section","p.big","reset","+1","Counter","Attributes","and","events","stand","before","the","element","they","shape","Modifiers","The","of","is","word","makes","it,","with","its","classes","id","written","after","tag","Element","words","Each","paragraph","this","site","s","words,","modifiers,","your","Pages","described","in"],"local":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"mem":[[28,"A brace that reads a name runs again when an event changes that name, nothing else does."],[29,"Names"]],"nums":[[12,0],[21,0]],"lists":[[11,[]]],"scripts":[],"repl":[["each",[[null,null,0,0,"each"]]],["after",[[null,null,0,0,"after"]]],["Card",[["_cb@ _ch@ {{~_ch~} h3 {~_cb~} p} article.card","_cb@ _ch@ {{~_ch~} h3 {~_cb~} p} article.card",1,0,null]]]],"gen":2,"replNum":false,"ow":false,"files":[]},P={"events":[],"regions":[[0,null,[["V",29]],[29],0],[1,null,[["V",28]],[28],0],[2,null,[["V",29]],[29],0],[3,null,[["V",28]],[28],0],[4,null,[["V",29]],[29],0],[5,null,[["V",28]],[28],0]],"attrs":[],"twoWay":[],"routers":[6],"pages":[["home","\n  {Pages described in s} h1\n  {Each paragraph of this site is s: element words, modifiers, and words of your own.} p\n  {\n    {Element words} {The name of an element is a word that makes it, with its classes and id written after the tag.} Card\n    {Modifiers} {Attributes and events stand before the element they shape.} Card\n    {Names} {A brace that reads a name runs again when an event changes that name, nothing else does.} Card\n  } div.cards\n"],["counter","\n  {Counter} h1\n  {\n    {~count~} p.big\n    {count;} onclick {+1} button\n    {0 count#} onclick {reset} button\n  } section\n"],["list","\n  {A list that stays} h1\n  {What next?} placeholder= {~draft~} value= input\n  {{~draft~} todos l  {} draft`} onclick {Add} button\n  {todos l-} onclick {Clear} button\n  {todos {{~it~} li} each} ul\n"]],"rules":[],"kept":["todos"],"timers":[]}
+const dec=(v)=>v&&typeof v==='object'?('n' in v?Number(v.n.replace('inf','Infinity')):v):v
+const rt=new Rt({lib:Object.fromEntries(S.files),write:(s)=>console.log(s.replace(/^\n/,''))})
+rt.reader=(src)=>{const u=C.get(src);if(u)return u;throw new Error('this text was made while the page ran, and a compiled page has no reader: '+src.slice(0,60))}
+const dom=attachDom(rt,{mount:document.body})
+S.names.forEach((n,i)=>{rt.it.sym(n);rt.it.local[i]=!!S.local[i]})
+rt.mem=[];rt.nums=[];rt.lists=[];rt.scripts=[]
+for(const[i,v]of S.mem)rt.mem[i]=dec(v)
+for(const[i,v]of S.nums)rt.nums[i]=dec(v)
+for(const[i,l]of S.lists)rt.lists[i]=l.map(dec)
+for(const[i,[t,b]]of S.scripts)rt.scripts[i]={u:rt.codeOf(t),b}
+for(const[k,ls]of S.repl)rt.repl.set(k,ls.filter((m)=>!m[4]||rt.natives.has(m[4])).map(([v,t,gen,lib,nat])=>nat?{val:nat,code:{n:rt.natives.get(nat)},gen,nat}:{val:dec(v),code:t===null?null:{u:rt.codeOf(t)},gen,lib:!!lib}))
+rt.gen=S.gen;rt.replNum=S.replNum;rt.ow=S.ow
+dom.resume(P)
+})()
+</script>
+</body>
+</html>
