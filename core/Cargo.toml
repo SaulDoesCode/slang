@@ -1,0 +1,10 @@
+[package]
+name = "s3-core"
+version = "0.3.0"
+edition = "2021"
+rust-version = "1.70"
+description = "s³: the s machine, world model, sphere graph and zones"
+
+[lib]
+name = "s3_core"
+path = "src/lib.rs"
