@@ -1,0 +1,172 @@
+{
+  "s3": 1,
+  "name": "05-spheres",
+  "next": 11,
+  "params": {},
+  "goal": {
+    "order": 5,
+    "title": "5 · Spheres carry lines",
+    "text": "The seed sends the line 1 2 along its ray. A sphere struck by a ray links to its striker; a pulse runs each body on the line it carries.\n\nPut a function sphere between seed and show (graph tab) whose body adds the two numbers: + =~ . Aim it at show with Alt+drag.",
+    "shown": {
+      "show": "3"
+    },
+    "par": {
+      "events": 4
+    },
+    "steps": [
+      {
+        "on": "sphere",
+        "text": "Open the graph tab in the palette, click function, then click in the world between seed and show."
+      },
+      {
+        "on": "settext",
+        "text": "In the inspector, type + =~ into the body and press Save body."
+      },
+      {
+        "on": "put",
+        "text": "Alt+drag from the function onto show: the strike links them."
+      },
+      {
+        "on": "solved",
+        "text": "Run it and Check: show displays 3."
+      }
+    ]
+  },
+  "spaces": [
+    {
+      "id": 3,
+      "owner": "sphere",
+      "of": 2
+    },
+    {
+      "id": 8,
+      "owner": "sphere",
+      "of": 7
+    }
+  ],
+  "plates": [
+    {
+      "id": 1,
+      "space": 0,
+      "kind": "main",
+      "name": "main",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "w": 12,
+      "d": 8,
+      "arrow": "+x"
+    },
+    {
+      "id": 4,
+      "space": 3,
+      "kind": "inside",
+      "name": "",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "w": 8,
+      "d": 6,
+      "arrow": "+x"
+    },
+    {
+      "id": 9,
+      "space": 8,
+      "kind": "inside",
+      "name": "",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "w": 8,
+      "d": 6,
+      "arrow": "+x"
+    }
+  ],
+  "bricks": [
+    {
+      "id": 5,
+      "space": 3,
+      "cell": [
+        0,
+        1,
+        0
+      ],
+      "kind": "num",
+      "word": "1"
+    },
+    {
+      "id": 6,
+      "space": 3,
+      "cell": [
+        0,
+        2,
+        0
+      ],
+      "kind": "num",
+      "word": "2"
+    }
+  ],
+  "spheres": [
+    {
+      "id": 2,
+      "name": "seed",
+      "kind": "src",
+      "pos": [
+        -6,
+        4,
+        6
+      ],
+      "r": 0.8,
+      "aim": [
+        1,
+        0,
+        0
+      ],
+      "reach": 60,
+      "strike": "sticky",
+      "params": {
+        "every": 0,
+        "run": 1
+      },
+      "muted": [],
+      "body": 3
+    },
+    {
+      "id": 7,
+      "name": "show",
+      "kind": "out",
+      "pos": [
+        6,
+        4,
+        6
+      ],
+      "r": 0.8,
+      "aim": [
+        1,
+        0,
+        0
+      ],
+      "reach": 60,
+      "strike": "sticky",
+      "params": {},
+      "muted": [],
+      "body": 8
+    }
+  ],
+  "links": [
+    {
+      "id": 10,
+      "from": 2,
+      "to": 7,
+      "mode": "sticky",
+      "port": "out"
+    }
+  ],
+  "zones": []
+}

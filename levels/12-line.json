@@ -1,0 +1,413 @@
+{
+ "s3": 1,
+ "name": "12-line",
+ "next": 30,
+ "params": {},
+ "goal": {
+  "order": 12,
+  "title": "12 \u00b7 A line of machines",
+  "text": "Items ride tracks a cell a tick. A machine standing just past a track's end takes what the track carries, works on it, and puts what comes out onto the tracks that start beside it. A device whose whole body is one machine word works as that machine.\n\nThe source puts out 16753920, orange. The writer makes it a cube on the track raw; the cutter cuts it into three byte bars, red green blue, onto bars. Put a stacker past the end of bars, where the gap is: it waits for all three bars and stacks them back into the cube, onto whole, and the reader shows its value on seen.",
+  "shown": {
+   "seen": "16753920"
+  },
+  "steps": [
+   {
+    "on": "run",
+    "text": "Run it first (F5): the clock starts by itself for a world with tracks. Watch the cube go raw, cut into three bars that queue at the end of bars."
+   },
+   {
+    "on": "sphere",
+    "text": "In the palette, graph tab, pick stacker and click the empty cell past the end of bars (x 10). In walk mode the bar holds machines too: pack one with the bar dialog."
+   },
+   {
+    "on": "solved",
+    "text": "Press Check to see the stars."
+   }
+  ]
+ },
+ "spaces": [
+  {
+   "id": 3,
+   "owner": "sphere",
+   "of": 2
+  },
+  {
+   "id": 7,
+   "owner": "sphere",
+   "of": 6
+  },
+  {
+   "id": 13,
+   "owner": "sphere",
+   "of": 12
+  },
+  {
+   "id": 23,
+   "owner": "sphere",
+   "of": 22
+  },
+  {
+   "id": 27,
+   "owner": "sphere",
+   "of": 26
+  }
+ ],
+ "plates": [
+  {
+   "id": 1,
+   "space": 0,
+   "kind": "main",
+   "name": "main",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "w": 12,
+   "d": 8,
+   "arrow": "+x"
+  },
+  {
+   "id": 4,
+   "space": 3,
+   "kind": "inside",
+   "name": "",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "w": 8,
+   "d": 6,
+   "arrow": "+x"
+  },
+  {
+   "id": 8,
+   "space": 7,
+   "kind": "inside",
+   "name": "",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "w": 8,
+   "d": 6,
+   "arrow": "+x"
+  },
+  {
+   "id": 14,
+   "space": 13,
+   "kind": "inside",
+   "name": "",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "w": 8,
+   "d": 6,
+   "arrow": "+x"
+  },
+  {
+   "id": 24,
+   "space": 23,
+   "kind": "inside",
+   "name": "",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "w": 8,
+   "d": 6,
+   "arrow": "+x"
+  },
+  {
+   "id": 28,
+   "space": 27,
+   "kind": "inside",
+   "name": "",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "w": 8,
+   "d": 6,
+   "arrow": "+x"
+  }
+ ],
+ "bricks": [
+  {
+   "id": 5,
+   "space": 3,
+   "cell": [
+    0,
+    1,
+    0
+   ],
+   "kind": "num",
+   "word": "16753920"
+  },
+  {
+   "id": 9,
+   "space": 7,
+   "cell": [
+    0,
+    1,
+    0
+   ],
+   "kind": "lit",
+   "word": "writer"
+  },
+  {
+   "id": 15,
+   "space": 13,
+   "cell": [
+    0,
+    1,
+    0
+   ],
+   "kind": "lit",
+   "word": "cutter"
+  },
+  {
+   "id": 25,
+   "space": 23,
+   "cell": [
+    0,
+    1,
+    0
+   ],
+   "kind": "lit",
+   "word": "reader"
+  }
+ ],
+ "spheres": [
+  {
+   "id": 2,
+   "name": "cube",
+   "kind": "src",
+   "pos": [
+    0.5,
+    1.5,
+    11.5
+   ],
+   "r": 0.8,
+   "aim": [
+    1,
+    0,
+    0
+   ],
+   "reach": 0.01,
+   "strike": "sticky",
+   "params": {
+    "every": 4,
+    "run": 0
+   },
+   "muted": [],
+   "body": 3,
+   "cell": [
+    0,
+    1,
+    11
+   ]
+  },
+  {
+   "id": 6,
+   "name": "writer",
+   "kind": "fn",
+   "pos": [
+    1.5,
+    1.5,
+    11.5
+   ],
+   "r": 0.8,
+   "aim": [
+    1,
+    0,
+    0
+   ],
+   "reach": 0.01,
+   "strike": "sticky",
+   "params": {},
+   "muted": [],
+   "body": 7,
+   "cell": [
+    1,
+    1,
+    11
+   ]
+  },
+  {
+   "id": 12,
+   "name": "cutter",
+   "kind": "fn",
+   "pos": [
+    5.5,
+    1.5,
+    11.5
+   ],
+   "r": 0.8,
+   "aim": [
+    1,
+    0,
+    0
+   ],
+   "reach": 0.01,
+   "strike": "sticky",
+   "params": {},
+   "muted": [],
+   "body": 13,
+   "cell": [
+    5,
+    1,
+    11
+   ]
+  },
+  {
+   "id": 22,
+   "name": "reader",
+   "kind": "fn",
+   "pos": [
+    14.5,
+    1.5,
+    11.5
+   ],
+   "r": 0.8,
+   "aim": [
+    1,
+    0,
+    0
+   ],
+   "reach": 0.01,
+   "strike": "sticky",
+   "params": {},
+   "muted": [],
+   "body": 23,
+   "cell": [
+    14,
+    1,
+    11
+   ]
+  },
+  {
+   "id": 26,
+   "name": "seen",
+   "kind": "out",
+   "pos": [
+    14.5,
+    1.5,
+    13.5
+   ],
+   "r": 0.8,
+   "aim": [
+    1,
+    0,
+    0
+   ],
+   "reach": 0.01,
+   "strike": "sticky",
+   "params": {},
+   "muted": [],
+   "body": 27,
+   "cell": [
+    14,
+    1,
+    13
+   ]
+  }
+ ],
+ "links": [
+  {
+   "id": 10,
+   "from": 2,
+   "to": 6,
+   "mode": "sticky",
+   "port": "out"
+  },
+  {
+   "id": 29,
+   "from": 22,
+   "to": 26,
+   "mode": "sticky",
+   "port": "out"
+  }
+ ],
+ "zones": [],
+ "datums": [],
+ "tracks": [
+  {
+   "id": 11,
+   "name": "raw",
+   "cells": [
+    [
+     2,
+     1,
+     11
+    ],
+    [
+     3,
+     1,
+     11
+    ],
+    [
+     4,
+     1,
+     11
+    ]
+   ],
+   "speed": 1
+  },
+  {
+   "id": 16,
+   "name": "bars",
+   "cells": [
+    [
+     6,
+     1,
+     11
+    ],
+    [
+     7,
+     1,
+     11
+    ],
+    [
+     8,
+     1,
+     11
+    ],
+    [
+     9,
+     1,
+     11
+    ]
+   ],
+   "speed": 1
+  },
+  {
+   "id": 21,
+   "name": "whole",
+   "cells": [
+    [
+     11,
+     1,
+     11
+    ],
+    [
+     12,
+     1,
+     11
+    ],
+    [
+     13,
+     1,
+     11
+    ]
+   ],
+   "speed": 1
+  }
+ ]
+}

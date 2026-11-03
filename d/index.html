@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>d</title>
+<link rel="stylesheet" href="play.css">
+<link rel="icon" href="data:,">
+</head>
+<body>
+<header id="bar">
+  <b>$</b>
+  <button id="new" title="An empty page">new</button>
+  <button id="open" title="Open a .js file (Ctrl+O)">open</button>
+  <span id="name"></span>
+  <button id="save" title="Save to the file it came from (Ctrl+S)">save</button>
+  <button id="export" title="The page as one .html file with d.js in it">.html</button>
+  <span class="sep"></span>
+  <button id="run" title="Run (Ctrl+Enter)">run</button>
+  <label title="Run a moment after each edit"><input type="checkbox" id="live" checked> live</label>
+  <button id="ref" title="The abbreviations (F1)">words</button>
+  <span id="status"></span>
+  <input type="file" id="file" accept=".js,text/javascript,text/plain" hidden>
+</header>
+<main id="panes">
+  <section id="left">
+    <textarea id="src" spellcheck="false" autocomplete="off"></textarea>
+    <div id="count"></div>
+  </section>
+  <div id="split" title="Drag to resize"></div>
+  <section id="right"><iframe id="view" title="the page"></iframe></section>
+</main>
+
+<aside id="words" hidden>
+  <div class="head"><b>$`…`</b><span>F1 closes</span></div>
+  <div class="cols">
+  <div>
+    <h4>elements</h4>
+    <p><code>div.card#main</code> tag, classes, id; no tag is <code>div</code>, or <code>li</code> in a list, <code>tr</code> in a table, <code>td</code> in a row, <code>option</code> in a select</p>
+    <p><code>[href=/x title="a b" hidden]</code> attributes · <code>{text}</code> text · <code>@name</code> a ref (<code>node.$.name</code>), and a form field's name</p>
+    <p><code>:value</code> the main attribute: <code>a:#/about</code> href, <code>img:p.png</code> src, <code>input:email</code> type, <code>form:/send</code> action, <code>label:n</code> for, <code>option:v</code> value</p>
+    <p><code>a&gt;b</code> child · <code>a+b</code> sibling · <code>^</code> up a level · <code>(a&gt;b)+c</code> groups</p>
+    <p><code>li*3{Item $}</code> three, <code>$</code> the count · <code>li*${list}{$}</code> one per item, <code>$</code> the item, <code>$.name</code> its field · <code>$$</code> a dollar sign</p>
+    <h4>${slots}</h4>
+    <p>right after an element: a function is its event (click; input on inputs; change on selects and checkboxes; submit on forms, which gives the values by name) · a signal is live text, or the value of an input both ways · an object is attributes: <code>on…</code> keys are events, function values are live, <code>class: {on: flag}</code> toggles, <code>style: {…}</code></p>
+    <p>in <code>{text}</code> or <code>[attr=…]</code>: a value, or live when a signal or function</p>
+    <p>in place of an element: nodes, text, arrays; a function there is a part rebuilt when what it read changes</p>
+  </div>
+  <div>
+    <h4>signals</h4>
+    <p><code>n = $(0)</code> · <code>n()</code> reads · <code>n(5)</code> writes · <code>n(x =&gt; x + 1)</code> updates</p>
+    <p><code>li*${list}</code> with a signal <code>list</code> is a live list: items that stay keep their elements</p>
+    <p>handlers get <code>(e, item, i)</code> in a repeat, <code>(e, element)</code> otherwise</p>
+    <h4>the rest</h4>
+    <p><code>$.fx(() =&gt; …)</code> runs again when what it read changes · <code>$.c(() =&gt; …)</code> a signal computed from others</p>
+    <p><code>$.css`.x { color: ${c} }`</code> a style sheet, live in its slots</p>
+    <p><code>$.keep('name', $(0))</code> kept in the browser · <code>$.hash()</code> the address after # · <code>$.at('#app', node)</code> mounts · <code>$.q</code> <code>$.qa</code></p>
+    <h4>here</h4>
+    <p>the code runs in the page on the right; when its last value is a node, the page shows it · <b>Ctrl+Enter</b> runs · <b>Ctrl+S</b> saves · <b>Ctrl+O</b> opens</p>
+    <p>the counts: characters of code, of the <code>$`…`</code> abbreviations in it, and of the HTML the page holds</p>
+  </div>
+  </div>
+</aside>
+<script type="module" src="play.js"></script>
+</body>
+</html>

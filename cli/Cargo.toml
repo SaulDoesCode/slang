@@ -1,0 +1,11 @@
+[package]
+name = "s3-cli"
+version = "0.3.0"
+edition = "2021"
+
+[[bin]]
+name = "s3"
+path = "src/main.rs"
+
+[dependencies]
+s3-core = { path = "../core" }

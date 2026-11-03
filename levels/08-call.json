@@ -1,0 +1,27 @@
+{
+  "s3": 1,
+  "name": "08-call",
+  "next": 10,
+  "params": {},
+  "goal": {"order":8,"title":"8 · A call through a gate","text":"adder is an rpc zone: door. in code sends the line through the door and waits. Whatever reaches the door again from inside, before the zone goes quiet, is the return.\n\nMake the main plate print 43: inside adder, add the two numbers and send the result back to the door.","output":"43","par":{"events":2}},
+  "spaces": [
+    {"id":8,"owner":"sphere","of":7}
+  ],
+  "plates": [
+    {"id":1,"space":0,"kind":"main","name":"main","at":[0,0,0],"w":12,"d":8,"arrow":"+x"},
+    {"id":9,"space":8,"kind":"inside","name":"","at":[0,0,0],"w":8,"d":6,"arrow":"+x"}
+  ],
+  "bricks": [
+    {"id":2,"space":0,"cell":[0,1,0],"kind":"num","word":"21"},
+    {"id":3,"space":0,"cell":[0,2,0],"kind":"num","word":"22"},
+    {"id":4,"space":0,"cell":[0,3,0],"kind":"name","word":"door","cap":"."},
+    {"id":5,"space":0,"cell":[0,4,0],"kind":"cmd","word":">"}
+  ],
+  "spheres": [
+    {"id":7,"name":"door","kind":"gate","pos":[10,5,5],"r":0.8,"aim":[1,0,0],"reach":60,"strike":"sticky","params":{},"muted":[],"body":8}
+  ],
+  "links": [],
+  "zones": [
+    {"id":6,"name":"adder","kind":"rpc","min":[10,0,0],"max":[19,9,9],"params":{},"captures":[]}
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "s3": 1,
+  "name": "03-names",
+  "next": 2,
+  "params": {},
+  "goal": {
+    "order": 3,
+    "title": "3 · Caps on names",
+    "text": "A cap says what a name brick does: # stores a number, ~ looks it up, ; adds to it. Type x# or x~ and the cap appears on the brick.\n\nStore 5 in x, add 3 to x, print x. Two columns read in order along the plate arrow.",
+    "output": "8",
+    "par": {
+      "bricks": 6
+    },
+    "steps": [
+      {
+        "on": "place",
+        "text": "In the first column, type 5 then x#: # stores the number in x."
+      },
+      {
+        "on": "place",
+        "text": "Start the next column with Ctrl+Enter: 3 then x; adds 3 to x."
+      },
+      {
+        "on": "place",
+        "text": "A third column: x~ looks x up, > prints it."
+      },
+      {
+        "on": "solved",
+        "text": "Run it, then Check: columns run in the order the arrow shows."
+      }
+    ]
+  },
+  "spaces": [],
+  "plates": [
+    {
+      "id": 1,
+      "space": 0,
+      "kind": "main",
+      "name": "main",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "w": 12,
+      "d": 8,
+      "arrow": "+x"
+    }
+  ],
+  "bricks": [],
+  "spheres": [],
+  "links": [],
+  "zones": []
+}

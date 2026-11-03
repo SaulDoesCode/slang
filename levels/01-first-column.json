@@ -1,0 +1,54 @@
+{
+  "s3": 1,
+  "name": "01-first-column",
+  "next": 2,
+  "params": {},
+  "goal": {
+    "order": 1,
+    "title": "1 · A column is a line",
+    "text": "Click a cell on the plate and type a word; Enter places it and moves up. A column is read from the bottom to the top, and the top brick acts on everything below it.\n\nMake the program print hello.",
+    "output": "hello",
+    "par": {
+      "bricks": 2
+    },
+    "steps": [
+      {
+        "on": "place",
+        "text": "Click a cell on the plate. Type hello and press Enter: the word becomes a brick and the cursor moves up."
+      },
+      {
+        "on": "place",
+        "text": "Type > and press Enter. The column now reads hello > from the bottom up: > prints the line."
+      },
+      {
+        "on": "run",
+        "text": "Press Run (F5). The output shows hello."
+      },
+      {
+        "on": "solved",
+        "text": "Press Check to see the stars."
+      }
+    ]
+  },
+  "spaces": [],
+  "plates": [
+    {
+      "id": 1,
+      "space": 0,
+      "kind": "main",
+      "name": "main",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "w": 12,
+      "d": 8,
+      "arrow": "+x"
+    }
+  ],
+  "bricks": [],
+  "spheres": [],
+  "links": [],
+  "zones": []
+}

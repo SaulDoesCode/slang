@@ -1,0 +1,54 @@
+{
+  "s3": 1,
+  "name": "02-numbers",
+  "next": 2,
+  "params": {},
+  "goal": {
+    "order": 2,
+    "title": "2 · Numbers land in =",
+    "text": "a b * puts the product into the name =, and clears the line. =~ looks the name up and puts its value back on the line.\n\nPrint 42, starting from 6 and 7.",
+    "output": "42",
+    "par": {
+      "bricks": 5
+    },
+    "steps": [
+      {
+        "on": "place",
+        "text": "Type 6, Enter, 7, Enter: two numbers on the line."
+      },
+      {
+        "on": "place",
+        "text": "Type * and Enter. The product goes into the name =, and the line is cleared."
+      },
+      {
+        "on": "place",
+        "text": "Type =~ to put the value of = back on the line, then > to print it."
+      },
+      {
+        "on": "solved",
+        "text": "Run it, then Check."
+      }
+    ]
+  },
+  "spaces": [],
+  "plates": [
+    {
+      "id": 1,
+      "space": 0,
+      "kind": "main",
+      "name": "main",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "w": 12,
+      "d": 8,
+      "arrow": "+x"
+    }
+  ],
+  "bricks": [],
+  "spheres": [],
+  "links": [],
+  "zones": []
+}

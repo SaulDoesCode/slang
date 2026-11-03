@@ -1,0 +1,84 @@
+{
+ "s3": 1,
+ "name": "04-shelf",
+ "next": 6,
+ "params": {},
+ "goal": {
+  "order": 4,
+  "title": "4 · Definitions sit on shelves",
+  "text": "The main plate already says 9 sq >, and nothing defines sq yet.\n\nOn the shelf below, build one column: a box that squares the top value, then the word as a quote, then ><. Inside the box: _a@ moves the top value into _a, _a~ _a~ * multiplies it by itself, =~ puts the product back.\n\nShelves run before the main plate, and a lower shelf is an older definition.",
+  "output": "81",
+  "par": {
+   "bricks": 11
+  }
+ },
+ "spaces": [],
+ "plates": [
+  {
+   "id": 1,
+   "space": 0,
+   "kind": "main",
+   "name": "main",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "w": 12,
+   "d": 8,
+   "arrow": "+x"
+  },
+  {
+   "id": 2,
+   "space": 0,
+   "kind": "shelf",
+   "name": "",
+   "at": [
+    0,
+    -6,
+    -3
+   ],
+   "w": 6,
+   "d": 1,
+   "arrow": "+x"
+  }
+ ],
+ "bricks": [
+  {
+   "id": 3,
+   "space": 0,
+   "cell": [
+    0,
+    1,
+    0
+   ],
+   "kind": "num",
+   "word": "9"
+  },
+  {
+   "id": 4,
+   "space": 0,
+   "cell": [
+    0,
+    2,
+    0
+   ],
+   "kind": "lit",
+   "word": "sq"
+  },
+  {
+   "id": 5,
+   "space": 0,
+   "cell": [
+    0,
+    3,
+    0
+   ],
+   "kind": "cmd",
+   "word": ">"
+  }
+ ],
+ "spheres": [],
+ "links": [],
+ "zones": []
+}

@@ -1,0 +1,25 @@
+{
+  "s3": 1,
+  "name": "06-ratchet",
+  "next": 9,
+  "params": {},
+  "goal": {"order":6,"title":"6 · A ratchet is a loop","text":"A ratchet sends the line out its loop links n times, then once out its exit links, then starts again. Its body sees the count as the local :i.\n\nStarting from 1, make result show 32: double five times. The first link a ratchet strikes is its loop; the next is its exit (the inspector can change ports).","shown":{"result":"32"},"par":{"events":13}},
+  "spaces": [
+    {"id":3,"owner":"sphere","of":2},
+    {"id":7,"owner":"sphere","of":6}
+  ],
+  "plates": [
+    {"id":1,"space":0,"kind":"main","name":"main","at":[0,0,0],"w":12,"d":8,"arrow":"+x"},
+    {"id":4,"space":3,"kind":"inside","name":"","at":[0,0,0],"w":8,"d":6,"arrow":"+x"},
+    {"id":8,"space":7,"kind":"inside","name":"","at":[0,0,0],"w":8,"d":6,"arrow":"+x"}
+  ],
+  "bricks": [
+    {"id":5,"space":3,"cell":[0,1,0],"kind":"num","word":"1"}
+  ],
+  "spheres": [
+    {"id":2,"name":"seed","kind":"src","pos":[-9,4,6],"r":0.8,"aim":[0,1,0],"reach":60,"strike":"sticky","params":{"every":0,"run":1},"muted":[],"body":3},
+    {"id":6,"name":"result","kind":"out","pos":[0,0,6],"r":0.8,"aim":[1,0,0],"reach":60,"strike":"sticky","params":{},"muted":[],"body":7}
+  ],
+  "links": [],
+  "zones": []
+}
