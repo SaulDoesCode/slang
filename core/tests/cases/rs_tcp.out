@@ -1,0 +1,5 @@
+
+ server got: hello from the client
+ client got: echo hello from the client
+ after close, eof is 1
+ connection refused, as expected

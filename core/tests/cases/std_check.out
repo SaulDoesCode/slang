@@ -1,0 +1,11 @@
+
+ ok
+ fail got 5 want 6
+ ok
+ ok
+ x
+ fail got 0 want 1
+ checked 3 ok 2 failed
+ ok
+ ok
+ checked 2 ok 0 failed
