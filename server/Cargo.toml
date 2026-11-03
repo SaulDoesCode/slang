@@ -1,0 +1,13 @@
+[package]
+name = "s3-server"
+version = "0.3.0"
+edition = "2021"
+
+[[bin]]
+name = "s3-studio"
+path = "src/main.rs"
+
+[dependencies]
+s3-core = { path = "../core" }
+salvo = { version = "=1.0.1", default-features = false, features = ["server", "http1", "serve-static"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync"] }
