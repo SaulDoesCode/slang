@@ -1,0 +1,9 @@
+push 3
+push 4
+show
+add
+show
+push 10
+pop
+foo
+show
