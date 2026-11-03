@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>s³ studio</title>
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="data:,">
+</head>
+<body>
+<canvas id="view" tabindex="0"></canvas>
+
+<header id="bar" class="chrome win" data-win="bar">
+  <span class="grip strip" title="Drag to move the bar; dock it at the top or the bottom">⠿</span>
+  <button class="btn" id="b-menu" title="Menu: worlds, tutorial, theme, layout">≡</button>
+  <b class="title">s³</b>
+  <select id="world-pick" title="Worlds in the worlds folder"></select>
+  <button class="btn" id="b-check" title="Check the goal" hidden>Check</button>
+  <span class="sep"></span>
+  <button class="btn" id="b-run" title="Run (F5)">Run</button>
+  <button class="btn" id="b-pause" title="Pause (F6)" disabled>Pause</button>
+  <button class="btn" id="b-token" title="Step one token (F10)">Token</button>
+  <button class="btn" id="b-column" title="Step one column (Shift+F10)">Column</button>
+  <button class="btn" id="b-event" title="Step one pulse event (F9)">Event</button>
+  <button class="btn" id="b-stop" title="Stop the run" disabled>Stop</button>
+  <label title="Lockstep: one fixed schedule"><input type="checkbox" id="c-lock"> lockstep</label>
+  <label title="Run the clock: sources with every fire on their ticks"><input type="checkbox" id="c-clock"> clock</label>
+  <span class="sep"></span>
+  <button class="btn" id="b-undo" title="Undo (Ctrl+Z)">Undo</button>
+  <button class="btn" id="b-redo" title="Redo (Ctrl+Shift+Z)">Redo</button>
+  <button class="btn" id="b-text" title="The world as s text">Text</button>
+  <button class="btn" id="b-build" title="Compile to Rust, build with rustc and run">Build</button>
+
+  <span id="crumbs"></span>
+  <span id="status"></span>
+</header>
+
+<nav id="palette" class="chrome win" data-win="palette">
+  <div class="strip"><b>palette</b><button class="x fold" title="Fold (double-click the strip)">▾</button></div>
+  <div id="tabs"></div>
+  <input id="pal-filter" placeholder="filter" spellcheck="false">
+  <div id="pal-items"></div>
+</nav>
+
+<aside id="inspector" class="chrome win" data-win="inspector" hidden>
+  <div class="head strip"><b id="ins-title"></b><button class="x fold" title="Fold (double-click the strip)">▾</button><button class="x" id="ins-close" title="Close (Esc)">×</button></div>
+  <div id="ins-body"></div>
+</aside>
+
+<section id="console" class="chrome win" data-win="console">
+  <div class="rz" title="Drag to set the height"></div>
+  <div class="lh strip"><b>Output</b><span id="hud"></span>
+    <input id="find" placeholder="find  Ctrl+F" spellcheck="false" autocomplete="off" title="Find words and spheres: Enter goes to the next, Shift+Enter back">
+    <span id="find-n"></span>
+    <label><input type="checkbox" id="c-trace"> trace</label>
+    <button class="btn" id="b-clear">Clear</button></div>
+  <div id="out"></div>
+  <div class="con-row"><span class="lb-lab">s</span><input id="con-in" spellcheck="false" autocomplete="off" placeholder="` drops the console · Enter runs s here or in the running session · ↑ ↓ history"></div>
+</section>
+
+<div id="linebar" class="chrome" hidden>
+  <span class="lb-lab">column</span>
+  <div class="lb-wrap"><div id="lb-hl"></div><input id="lb-input" spellcheck="false" autocomplete="off"></div>
+  <span id="lb-msg"></span>
+</div>
+
+<div id="editor" hidden><input id="ed-input" spellcheck="false" autocomplete="off"><div id="ed-list"></div></div>
+
+<div class="modal" id="modal" hidden><div class="card chrome"><h3 id="m-title"></h3><div id="m-body"></div><div class="row" id="m-buttons"></div></div></div>
+
+<div id="stack"></div>
+<div id="marquee" hidden></div>
+<div id="minimap-w" class="chrome win" data-win="minimap">
+  <div class="strip"><b>top view</b><button class="x fold" title="Fold (double-click the strip)">▾</button></div>
+  <canvas id="minimap" width="180" height="180" title="Top view: click to move there"></canvas>
+</div>
+
+<div id="guide" class="chrome win" data-win="guide" hidden>
+  <div class="strip"><b id="g-title">tutorial</b><button class="x fold" title="Fold">▾</button><button class="x" id="g-close" title="Leave the tutorial">×</button></div>
+  <div id="g-body"></div>
+</div>
+
+<div id="menu" class="chrome" hidden></div>
+<div id="crosshair" hidden></div>
+<div id="hotbar" class="chrome" hidden></div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

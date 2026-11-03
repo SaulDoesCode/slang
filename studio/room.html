@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>s room</title>
+<link rel="stylesheet" href="room.css">
+<link rel="icon" href="data:,">
+</head>
+<body>
+<canvas id="view" tabindex="0"></canvas>
+<div id="cross" hidden></div>
+<div id="hint"></div>
+
+<div id="foot">
+  <pre id="out" hidden></pre>
+  <div id="comp" hidden></div>
+  <textarea id="box" rows="1" spellcheck="false" autocomplete="off" placeholder="s here runs with the file's definitions · /text searches · Enter on a page edits it"></textarea>
+  <div id="hud"><span id="file"></span><span id="aim"></span><span id="stat"></span></div>
+</div>
+
+<div id="files" class="sheet" hidden>
+  <div class="head"><b>Open</b><span id="root"></span></div>
+  <input id="f-filter" placeholder="filter, or a new name.s to make it">
+  <div id="f-list"></div>
+</div>
+
+<div id="help" class="sheet" hidden>
+  <div class="head"><b>The room</b><span>F1 closes</span></div>
+  <div class="cols">
+    <div>
+      <h4>moving</h4>
+      <p><kbd>W A S D</kbd> fly · <kbd>Space</kbd> <kbd>C</kbd> up, down · <kbd>Q</kbd> <kbd>E</kbd> roll · <kbd>Shift</kbd> fast</p>
+      <p>mouse looks while the cursor is captured; <kbd>Tab</kbd> frees or captures it; with it free, the right button drags the view</p>
+      <p>the wheel moves in and out along the view, which is the zoom; a sideways scroll moves sideways, <kbd>Shift</kbd>+wheel up and down · <kbd>+</kbd> <kbd>-</kbd> set the speed · <kbd>Home</kbd> back to the start · <kbd>G</kbd> to the definition of the word aimed at, or into the file a <code>name.s.</code> word loads · <kbd>B</kbd> back from there</p>
+      <h4>pages</h4>
+      <p>every paragraph of the file is a page; the file stays plain s, in page order</p>
+      <p>hold the left button on a page and look or move to carry it; the wheel while carrying pushes it nearer or further · <kbd>Alt</kbd>+wheel pushes the page aimed at</p>
+      <p><kbd>N</kbd> a new page here, after the one aimed at · <kbd>[</kbd> <kbd>]</kbd> move the aimed page earlier or later in the file · <kbd>Ctrl</kbd>+<kbd>L</kbd> spreads every page out again</p>
+    </div>
+    <div>
+      <h4>editing</h4>
+      <p>double click a page, or aim and press <kbd>Enter</kbd>: it opens in the box below at that word; a click on the page moves the caret there</p>
+      <p><kbd>Tab</kbd> completes the word · <kbd>Esc</kbd> ends the edit · a page left empty goes · a blank line splits a page in two</p>
+      <p><kbd>Ctrl</kbd>+<kbd>S</kbd> saves (it also saves by itself) · <kbd>Ctrl</kbd>+<kbd>Z</kbd> outside the box undoes whole edits · <kbd>Ctrl</kbd>+<kbd>O</kbd> opens a file</p>
+      <h4>running</h4>
+      <p><kbd>F5</kbd> or <kbd>Ctrl</kbd>+<kbd>Enter</kbd> runs the file: what a word prints stands beside its line; an error marks its word · <kbd>L</kbd> runs again after every edit · <kbd>`</kbd> shows the whole output</p>
+      <p>the box, when no page is open in it, runs s with the file's definitions · <kbd>/</kbd> searches, <kbd>Enter</kbd> or <kbd>F3</kbd> goes to the next</p>
+      <p><kbd>Ctrl</kbd>+<kbd>B</kbd> builds the file to Rust and a binary beside it; <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>B</kbd> writes only the .rs</p>
+      <p class="dim">the worlds studio of s³ is at <a href="studio.html">studio.html</a></p>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="js/room.js"></script>
+</body>
+</html>
