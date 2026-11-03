@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>s</title>
+<link rel="stylesheet" href="s/s.css">
+<link rel="stylesheet" href="web/ed.css">
+<link rel="icon" href="data:,">
+</head>
+<body>
+<header id="bar">
+  <button id="toggleFiles" title="The files (Ctrl+P)">files</button>
+  <div id="tabs"></div>
+  <span class="sep"></span>
+  <button id="run" title="Run on the machine (Ctrl+Enter)">run</button>
+  <button id="build" title="Compile to Rust, build, run the binary (Ctrl+Shift+Enter)">build</button>
+  <label title="A build does at build time what the program does before it reaches outside (input, files, shell, threads, network, randomness, the arguments); the binary starts there"><input type="checkbox" id="fold"> fold</label>
+  <label title="Run on the machine a moment after each edit"><input type="checkbox" id="live"> live</label>
+  <span class="sep"></span>
+  <button id="pal" title="The words to click into the text (F2)">palette</button>
+  <button id="mint" title="The lines the caret's line mints (F6)">minted</button>
+  <label title="Show the braces the zones stand for"><input type="checkbox" id="braces"> braces</label>
+  <button id="ref" title="The keys (F1)">keys</button>
+  <a id="room" href="room.html" title="The same files as pages in space">room</a>
+</header>
+<main id="panes">
+  <aside id="files">
+    <input id="filter" placeholder="filter, or new name.s" spellcheck="false" autocomplete="off">
+    <div id="list"></div>
+    <div id="root"></div>
+  </aside>
+  <section id="left">
+    <div id="find" hidden>
+      <input id="q" placeholder="find" spellcheck="false" autocomplete="off">
+      <button id="qcase" class="tog" title="Match case">Aa</button>
+      <button id="qre" class="tog" title="Regular expression">.*</button>
+      <span id="qn"></span>
+      <button id="qprev" title="Previous (Shift+F3)">↑</button>
+      <button id="qnext" title="Next (F3, Enter)">↓</button>
+      <input id="rep" placeholder="replace" spellcheck="false" autocomplete="off">
+      <button id="rone" title="Replace this one">replace</button>
+      <button id="rall" title="Replace every one">all</button>
+      <button id="qclose" title="Close (Escape)">×</button>
+    </div>
+    <div id="ed"></div>
+    <div id="palette" hidden></div>
+  </section>
+  <div id="split" title="Drag to resize"></div>
+  <section id="right">
+    <nav id="rtabs">
+      <button data-tab="out" class="on">output</button>
+      <button data-tab="rust">rust</button>
+      <button data-tab="found">found</button>
+      <button data-tab="input">input</button>
+      <span id="stats"></span>
+    </nav>
+    <div id="t-out" class="pane">
+      <pre id="out"></pre>
+      <div id="forks"></div>
+      <div id="console"><span>›</span><input id="cmd" spellcheck="false" autocomplete="off" placeholder="s with this file's definitions · ↑ ↓ history"></div>
+    </div>
+    <div id="t-rust" class="pane" hidden><div class="tools"><button id="rsget" title="The file compiled to Rust (Ctrl+R)">compile to Rust</button><button id="rscopy">copy</button></div><pre id="rs"></pre></div>
+    <div id="t-found" class="pane" hidden><div class="tools" id="fhead"></div><div id="flist"></div></div>
+    <div id="t-input" class="pane" hidden>
+      <label>arguments <span>(args, argc; quote with ' ' to keep spaces)</span></label>
+      <input id="args" spellcheck="false" autocomplete="off">
+      <label>stdin <span>(the lines <code>&lt;_</code> reads, one per line)</span></label>
+      <textarea id="stdin" spellcheck="false"></textarea>
+      <p class="note">Kept per file, for runs on the machine and for builds.</p>
+    </div>
+    <div class="foot" id="where"></div>
+  </section>
+</main>
+<div id="tip" hidden></div>
+<div id="comp" hidden></div>
+
+<aside id="keys" hidden>
+  <div class="head"><b>s</b><span>F1 or Escape closes</span></div>
+  <div class="cols">
+  <div>
+    <h4>files</h4>
+    <p><b>Ctrl+P</b> the files: type to filter, Enter opens, a new <code>name.s</code> and Enter makes it · <b>Ctrl+S</b> save · <b>Alt+W</b> close the tab · <b>Alt+PageUp</b> / <b>Alt+PageDown</b> the tab before or after · a file changed on disk comes back when the tab has nothing unsaved</p>
+    <h4>running</h4>
+    <p><b>Ctrl+Enter</b> run on the machine: what each line prints stands at its left, a failed check in red, an error marked at its word · <b>Ctrl+Shift+Enter</b> compile to Rust, build and run the binary; with <b>fold</b> on, what the program does before it first reaches outside (input, files, the shell, threads, the network, randomness, the arguments) is done at build time, and the output says how far · <b>live</b> runs after each edit · <b>input</b> has the arguments and stdin · <b>Ctrl+R</b> the Rust · <b>Ctrl+`</b> the console: s with the file's definitions</p>
+    <h4>moving</h4>
+    <p><b>F12</b> or <b>Ctrl+click</b> the definition of the word at the caret: in the file, in a file it loads (<code>name.s.</code>), or in std (read-only) · <b>Alt+←</b> back · <b>Shift+F12</b> the uses · <b>Ctrl+Shift+O</b> the definitions of the file · <b>Ctrl+G</b> a line</p>
+    <h4>finding</h4>
+    <p><b>Ctrl+F</b> find · <b>F3</b> / <b>Shift+F3</b> next, previous · <b>Ctrl+H</b> replace · <b>Ctrl+Shift+F</b> find in every file</p>
+  </div>
+  <div>
+    <h4>writing</h4>
+    <p>completion opens after two letters, or with <b>Ctrl+Space</b>: the file's definitions, the commands, std, the names in the file · <b>Tab</b> or <b>Enter</b> takes one, <b>↑ ↓</b> pick, <b>Escape</b> closes</p>
+    <p>resting the pointer on a word shows what it is: a command with its signature, a std word, a sigil, where it is defined · <b>F2</b> the palette: click a word into the text, a sigil onto the word before the caret</p>
+    <p><b>Ctrl+=</b> / <b>Ctrl+−</b> / <b>Ctrl+0</b> text size · Ctrl+Z, Ctrl+Shift+Z, Ctrl+A, copy, cut, paste</p>
+    <h4>zones and lanes</h4>
+    <p>braces are zones, coloured by the word that takes them; <b>braces</b> shows them · <b>middle-drag</b> a range, the wheel picks what it becomes · <b>middle-click</b> a zone to unwrap or retype it</p>
+    <p><b>Ctrl+\</b> split into lanes · <b>Alt+Enter</b> add a lane · <b>Alt+Backspace</b> remove it · <b>Ctrl+]</b> merge · <b>Ctrl+Shift+]</b> join · <b>Ctrl+L</b> label · <b>Ctrl+M</b> fold lines into one · <b>F6</b> the minted lines, editable</p>
+    <p>after a run each fork says how it ran, and each join shows its lanes</p>
+  </div>
+  </div>
+</aside>
+
+<script type="module" src="s/app.js"></script>
+</body>
+</html>
